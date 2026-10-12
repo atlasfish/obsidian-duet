@@ -8,6 +8,7 @@ import { type AgentProfile, parseEnv } from './settings.ts';
 import { inlinePolicy } from './inline-tools.ts';
 import { startInlineCodexSession } from './inline-codex.ts';
 import type { InlineToolPolicy } from './inline-policy.ts';
+import { harnessOverrides } from './environment.ts';
 
 /** Conversation notes use CodexAgent; Duet note tools select the mention policy. */
 class DuetCodexAgent extends CodexAgent {
@@ -59,7 +60,7 @@ export class ProfileAgents {
 
   private build(profile: AgentProfile, extras: AgentExtras): Agent {
     const preferences = { cwd: vaultRoot(this.app), model: profile.model || undefined, effort: profile.effort || undefined, approval: profile.approval };
-    const options = { executable: profile.executablePath || undefined, env: parseEnv(profile.env), preferences };
+    const options = { executable: profile.executablePath || undefined, env: harnessOverrides(parseEnv(profile.env)), preferences };
     if (profile.harness === 'codex') {
       const policy = inlinePolicy(profile);
       return policy ? new DuetCodexAgent(options, policy) : new CodexAgent(options);
