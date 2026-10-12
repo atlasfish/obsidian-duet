@@ -13,7 +13,7 @@ const COMMAND_INPUT = {
 export function inlineCommandTool(cwd: string, onPermission: PermissionHandler, approval: InlineShellApproval = 'ask', env: Record<string, string> = {}): AgentTool {
   return defineTool({
     name: 'run_command',
-    description: `Run a command. ${approval === 'yolo' ? 'The user enabled YOLO: commands run without approval prompts.' : 'The user must approve each exact invocation.'} Working directory: ${cwd}. Shell: ${process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'}. Commands may access the network or change files. Output is limited to 64 KiB.`,
+    description: `Run a command on the host with Obsidian's OS permissions, outside Codex's native sandbox. The native sandbox's read-only mode does not restrict this tool; determine access from its execution results. ${approval === 'yolo' ? 'The user enabled YOLO: commands run without approval prompts.' : 'The user must approve each exact invocation.'} Working directory: ${cwd}. Shell: ${process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'}. Commands inherit the agent profile's environment and may access the network or change files. Output is limited to 64 KiB.`,
     input: COMMAND_INPUT,
     title: ({ command }) => `Run ${command}`,
     run: async (input, { signal }) => {
