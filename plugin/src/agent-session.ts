@@ -9,6 +9,7 @@ import {
   type PermissionHandler,
   type QuestionHandler,
   type ToolSet,
+  type InlineToolPolicy,
 } from '../../src/index.ts';
 import { AgentPeer } from './collab/agent-peer.ts';
 import type { SharedNote } from './collab/shared-note.ts';
@@ -20,6 +21,7 @@ export interface StartOptions {
   access: 'workspace' | 'read-only';
   resume?: string;
   tools?: ToolSet;
+  inlineTools?: InlineToolPolicy;
   model?: string;
   effort?: string;
   approval?: ApprovalSetting;
@@ -57,6 +59,7 @@ export async function startAgent(app: App, options: StartOptions): Promise<Agent
     beforeFileChange: options.beforeFileChange,
     ...approvalOptions(profile.harness, options.approval ?? profile.approval),
     ...(profile.harness === 'claude' && { sdkOptions: { strictMcpConfig: !profile.userTools } }),
+    ...(profile.harness === 'codex' && options.inlineTools && { inlineTools: options.inlineTools }),
   });
   if (!options.resume) return createSession(build());
   try {

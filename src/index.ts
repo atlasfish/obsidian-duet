@@ -12,6 +12,8 @@ export function createSession(options: CreateSessionOptions): Promise<AgentSessi
 }
 
 export type { ClaudeSessionOptions, CodexSessionOptions };
+export type { InlineToolPolicy, InlineShellApproval } from './adapters/codex/inline-policy.ts';
+export { inlineCommandTool } from './inline-command.ts';
 export { type ApprovalSetting, approvalOptions } from './approval.ts';
 export { findExecutable, harnessEnvironment } from './environment.ts';
 export * from './session.ts';

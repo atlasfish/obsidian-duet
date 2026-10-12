@@ -33,8 +33,11 @@ import type {
   TurnNotification,
 } from './protocol.ts';
 import { RpcConnection, RpcError } from './rpc.ts';
+import { inlineConfig, type CodexToolConfig, type InlineToolPolicy } from './inline-policy.ts';
 
 export interface CodexSessionOptions extends SessionOptions {
+  /** Enforce the optional tools selected for a mention. Native commands remain disabled. */
+  inlineTools?: InlineToolPolicy;
   /** When Codex asks before it acts. Default: `on-request`. */
   approvalPolicy?: ApprovalPolicy;
   /** What commands can do without approval. Default: `workspace-write`. */
@@ -125,6 +128,10 @@ export class CodexSession extends BaseSession {
       capabilities: tools ? { experimentalApi: true, requestAttestation: false } : null,
     });
     this.rpc.notify('initialized');
+    const inlineTools = this.options.inlineTools;
+    const config = inlineTools
+      ? inlineConfig(inlineTools, (await this.rpc.request<{ config: CodexToolConfig }>('config/read', { includeLayers: false, cwd: this.options.cwd })).config)
+      : undefined;
     const readOnly = this.options.access === 'read-only';
     const settings = {
       cwd: this.options.cwd,
@@ -132,6 +139,7 @@ export class CodexSession extends BaseSession {
       approvalPolicy: readOnly ? 'never' : (this.options.approvalPolicy ?? 'on-request'),
       sandbox: readOnly ? 'read-only' : (this.options.sandbox ?? 'workspace-write'),
       developerInstructions: this.options.instructions ?? null,
+      ...(config && { config }),
     };
     const dynamicTools = tools && [
       {
@@ -353,6 +361,7 @@ export class CodexSession extends BaseSession {
 
     switch (method) {
       case 'item/commandExecution/requestApproval': {
+        if (this.options.inlineTools) return { decision: 'decline' };
         const request = params as CommandApprovalParams;
         const detail = [request.command, request.reason && `Reason: ${request.reason}`]
           .filter(Boolean)
@@ -362,6 +371,7 @@ export class CodexSession extends BaseSession {
         return { decision: DECISIONS[decision] };
       }
       case 'item/fileChange/requestApproval': {
+        if (this.options.inlineTools) return { decision: 'decline' };
         const request = params as FileChangeApprovalParams;
         const item = this.items.get(request.itemId);
         const changes = item && 'changes' in item ? item.changes : [];
@@ -372,6 +382,7 @@ export class CodexSession extends BaseSession {
         return { decision: DECISIONS[decision] };
       }
       case 'item/permissions/requestApproval': {
+        if (this.options.inlineTools) return { permissions: {}, scope: 'turn' };
         const request = params as PermissionsApprovalParams;
         const detail = [request.reason, JSON.stringify(request.permissions, null, 2)].filter(Boolean).join('\n');
         const decision = await ask('permissions', 'Grant extra permissions', detail);
