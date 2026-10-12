@@ -128,9 +128,11 @@ createInterface({ input: process.stdin }).on('line', (line) => {
       return send({ id, result: { userAgent: `fake/${params.clientInfo.name}`, codexHome: '/tmp', platformFamily: 'unix', platformOs: 'macos' } });
     case 'initialized':
       return;
+    case 'config/read':
+      return send({ id, result: { config: { mcp_servers: { logs: {}, mail: {} }, plugins: { 'browser@bundled': { enabled: true } } } } });
     case 'thread/start':
       instructions = params.developerInstructions;
-      Object.assign(setup, { sandbox: params.sandbox, approvalPolicy: params.approvalPolicy, dynamicTools: params.dynamicTools });
+      Object.assign(setup, { sandbox: params.sandbox, approvalPolicy: params.approvalPolicy, dynamicTools: params.dynamicTools, config: params.config });
       return send({ id, result: { thread: { id: THREAD }, model: 'fake', cwd: params.cwd } });
     case 'thread/resume':
       if (params.threadId !== THREAD) {

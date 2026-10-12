@@ -10,7 +10,7 @@ export interface PermissionContext {
 const FILE_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit', 'fileChange']);
 
 function action(tool: string): string {
-  if (tool === 'Bash' || tool === 'command') return 'run a command';
+  if (tool === 'Bash' || tool === 'command' || tool === 'inlineCommand') return 'run a command';
   if (FILE_TOOLS.has(tool)) return 'change a file';
   if (tool === 'permissions') return 'get more access';
   return `use ${tool}`;
@@ -123,7 +123,7 @@ class PermissionModal extends Modal {
       return button;
     };
     choice('Allow once', 'y', 'allow', true).focus();
-    choice('Allow for this conversation', 'a', 'allow-session');
+    if (request.tool !== 'inlineCommand') choice('Allow for this conversation', 'a', 'allow-session');
     choice('Deny', 'n', 'deny');
   }
 

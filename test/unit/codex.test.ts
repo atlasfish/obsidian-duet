@@ -1,12 +1,19 @@
 import { chmodSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { startCodexSession, unwrapShell } from '../../src/adapters/codex/session.ts';
 import { z } from 'zod';
 import { type AgentEvent, type AgentSession, defineTool, type PermissionDecision, type PermissionRequest } from '../../src/index.ts';
 
 const FAKE = fileURLToPath(new URL('../fixtures/fake-codex.mjs', import.meta.url));
 chmodSync(FAKE, 0o755);
+
+// Windows does not execute shebang scripts directly. Use the same fixture through Node.
+vi.mock('node:child_process', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:child_process')>();
+  return { ...original, spawn: (command: string, args: string[], options: import('node:child_process').SpawnOptions) =>
+    command === FAKE ? original.spawn(process.execPath, [FAKE, ...args], options) : original.spawn(command, args, options) };
+});
 
 let session: AgentSession | undefined;
 afterEach(async () => {
@@ -214,6 +221,19 @@ describe('codex adapter', () => {
     session = await startCodexSession({ cwd: process.cwd(), clientName: 'test', executablePath: FAKE, access: 'read-only' });
     const setup = JSON.parse((await session.send('setup')).text);
     expect(setup).toMatchObject({ sandbox: 'read-only', approvalPolicy: 'never', capabilities: null });
+  });
+
+  it('passes an enforced mention policy and denies native approval bypasses', async () => {
+    const handler = vi.fn(async () => 'allow' as const);
+    session = await startCodexSession({ cwd: process.cwd(), clientName: 'test', executablePath: FAKE, access: 'read-only',
+      inlineTools: { webSearch: true, shell: true, mcpTools: { logs: ['read'] } }, onPermission: handler });
+    const setup = JSON.parse((await session.send('setup')).text);
+    expect(setup.config).toMatchObject({ web_search: 'live', 'features.shell_tool': false,
+      mcp_servers: { logs: { enabled_tools: ['read'] }, mail: { enabled: false } } });
+    expect(JSON.parse((await session.send('command')).text)).toEqual({ decision: 'decline' });
+    expect(JSON.parse((await session.send('file')).text)).toEqual({ decision: 'decline' });
+    expect(JSON.parse((await session.send('permissions')).text)).toEqual({ permissions: {}, scope: 'turn' });
+    expect(handler).not.toHaveBeenCalled();
   });
 
   it('streams reasoning summaries as thinking', async () => {

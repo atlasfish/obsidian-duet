@@ -40,7 +40,8 @@ export async function harnessEnvironment(
 ): Promise<Record<string, string>> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined) env[key] = value;
+    // Windows environment keys are case-insensitive, but this plain object is not.
+    if (value !== undefined) env[process.platform === 'win32' && key.toLowerCase() === 'path' ? 'PATH' : key] = value;
   }
   const dirs = [
     ...(env.PATH ?? '').split(path.delimiter),
@@ -49,7 +50,10 @@ export async function harnessEnvironment(
     ...SYSTEM_DIRS,
   ];
   env.PATH = [...new Set(dirs.filter(Boolean))].join(path.delimiter);
-  return { ...env, ...extra };
+  for (const [key, value] of Object.entries(extra)) {
+    env[process.platform === 'win32' && key.toLowerCase() === 'path' ? 'PATH' : key] = value;
+  }
+  return env;
 }
 
 /** Returns a function that shows a path relative to `cwd` when the path is inside it. */

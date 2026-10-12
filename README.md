@@ -12,6 +12,36 @@ Duet puts these agents in the editor. Write `@claude` and a request on any line,
 
 Duet uses your own Claude Code or Codex installation and login. It does not need an API key of its own.
 
+## Configurable inline tools in this fork
+
+This fork adds optional tools to **Codex inline mentions**. In **Settings → Duet**, select your Codex agent and enable **Configure inline tools**. Existing profiles keep their previous behavior until this switch is enabled. Claude and conversation notes keep their existing settings.
+
+| Setting | Behavior |
+|---|---|
+| Inline web search | Enables Codex's native live web search. The model and provider must support it. |
+| Inline Shell | Adds `duet.run_command` to inline mentions. |
+| Inline Shell approvals | **Ask** prompts for every command; **YOLO** executes without approval prompts. |
+| Inline MCP tools | One exact `server/tool` per line. Empty means no MCP tools. |
+
+For example, if your Codex `config.toml` defines an MCP server named `my-server` with tools named `read_logs` and `get_status`, enter:
+
+```text
+my-server/read_logs
+my-server/get_status
+```
+
+Server names are the keys under `[mcp_servers]`; tool names are the original MCP tool names, without Codex's `mcp__` prefix. Wildcards are not supported. Existing Codex `enabled_tools` and `disabled_tools` restrictions still apply. Unknown or disabled servers cause an error. Only servers declared in the effective Codex configuration are eligible; plugin-provided tools and app connectors are disabled for these controlled mentions.
+
+Shell commands run in the vault directory with **Obsidian's OS permissions**, outside Codex's sandbox. They can use the network and modify accessible files. Commands inherit the agent profile's environment variables and run through `cmd.exe` on Windows or `/bin/sh` elsewhere. Each command has a 60-second default timeout (up to 300 seconds), captures up to 64 KiB of output, and is terminated with its child processes when cancelled or timed out. Ask displays the exact command before execution; YOLO skips that prompt. Select **YOLO** to use SSH or other command-line tools without approving each invocation.
+
+Native Codex command tools remain disabled; Shell access is provided through Duet's command tool. The agent is instructed to edit the current note through Duet's existing note tools so live editing and undo continue to work. A file modified by Shell or MCP does not receive Duet's collaborative editing and undo tracking.
+
+Different inline tool policies use separate stored conversations. Changing settings leaves existing replies in the note. An in-progress turn keeps its original policy; wait for it to finish before sending a request with the new policy. Returning to an earlier policy resumes its matching conversation.
+
+The search toggle does not modify the model catalog. If your provider omits native search (for example, a Responses Lite model configuration), use a compatible model catalog in the Codex home selected by your agent's `CODEX_HOME` environment variable.
+
+Validation includes unit tests and a real Codex 0.153.4 app-server test against local HTTP and MCP fixtures. The latter checks the actual model request for native search, the selected MCP tool, and Duet's command tool, and verifies that unselected MCP tools, native Shell, and native patch tools are absent. It also executes a harmless YOLO command without prompting, then resumes the stored conversation and repeats the command. No external model credentials are used by that test. Obsidian UI testing remains a manual step.
+
 ## Quickstart
 
 ### Prerequisites
@@ -49,6 +79,12 @@ Write `@claude` or `@codex` and a request, then press Enter at the end of the li
 - **Start over:** run **Duet: Forget the mention conversation in this note**.
 
 Duet ignores tags in code blocks, in blockquotes and in email addresses. These tags stay plain text.
+
+### Optional request styling
+
+Copy [`docs/snippets/duet-requests.css`](docs/snippets/duet-requests.css) to your vault's `.obsidian/snippets/` folder and enable **duet-requests** under **Settings → Appearance → CSS snippets**. It styles editor lines containing a configured agent tag with smaller muted text, a subtle background, and a rounded border. The agent pill keeps its own color. This does not change the Markdown or mention trigger.
+
+In Reading view, this snippet styles paragraphs containing an agent tag. Keep each request in its own paragraph, with a blank line before and after it. Tight list items without a paragraph wrapper are not covered by the Reading view rule; Live Preview still styles their request line.
 
 ### Conversation notes
 

@@ -1,7 +1,8 @@
 import { type App, Notice, type TFile } from 'obsidian';
 import type * as Y from 'yjs';
-import type { AgentEvent, AgentSession } from '../../src/index.ts';
-import { activity, Presence, startAgent } from './agent-session.ts';
+import { inlineCommandTool, type AgentEvent, type AgentSession } from '../../src/index.ts';
+import { activity, Presence, startAgent, vaultRoot } from './agent-session.ts';
+import { inlinePolicy, inlineSessionKey } from './inline-tools.ts';
 import { calloutHeader, isCalloutHeader, renderCallout, type ReplyState } from './callout.ts';
 import { EditorBinding } from './collab/binding.ts';
 import type { CollabHub } from './collab/hub.ts';
@@ -10,14 +11,14 @@ import type { SharedNote } from './collab/shared-note.ts';
 import type { TriggeredMention } from './enter-trigger.ts';
 import { NoteTools, PLACEHOLDER } from './note-tools.ts';
 import type { PermissionPrompts } from './permission-modal.ts';
-import { type AgentProfile, displayName } from './settings.ts';
+import { type AgentProfile, displayName, parseEnv } from './settings.ts';
 
 const INSTRUCTIONS = `You are running inside Obsidian, the note-taking app, through the Duet plugin. Your working directory is the root of the user's vault.
 
 The user calls you by writing @ and your name with a request on a line of a note. Each message gives the note's path, its text, and the request. In the note text, the line ${PLACEHOLDER} stands for the request line and the callout that holds your reply.
 
 What you can change:
-- You can change only the note that the request is in. Change it with the duet tools: read_note, edit_note for targeted changes, and write_note for a broad rewrite. The user sees each edit as you make it and may type at the same time.
+- For note edits, you can change only the note that the request is in. Change it with the duet tools: read_note, edit_note for targeted changes, and write_note for a broad rewrite. The user sees each edit as you make it and may type at the same time.
 - You cannot change any other file. You have no file-editing tools and no shell, and the duet tools work only on this note.
 - You can read other files in the vault, and search them, when the request needs them.
 - Do not try to change the request line or your reply callout. The plugin writes your reply.
@@ -28,7 +29,7 @@ How to answer:
 - Change the note only when the request asks for it. For a broad rewrite, such as "clean this up", keep the user's meaning, facts, links and structure unless asked otherwise. Then say in one sentence what you changed.
 - Wait for each tool to finish. Do not start background work.`;
 
-/** Session ids by note path, then by agent name. The plugin saves this map with its settings. */
+/** Session ids by note path, then by agent/policy key. The plugin saves this map with its settings. */
 export type SessionIndex = Record<string, Record<string, string>>;
 
 export interface Mention extends TriggeredMention {
@@ -208,16 +209,28 @@ export class MentionAgents {
   }
 
   private liveSession(file: TFile, profile: AgentProfile): Promise<LiveSession> {
-    const key = `${profile.name}\u0000${file.path}`;
+    const key = `${inlineSessionKey(profile)}\u0000${file.path}`;
     const existing = this.live.get(key);
     if (existing) return existing;
-    const starting = this.start(file, profile, key);
+    const starting = this.startWithPolicy(file, profile, key);
     this.live.set(key, starting);
     starting.then(
       (live) => this.settled.set(key, live),
       () => this.live.delete(key),
     );
     return starting;
+  }
+
+  /** Reserve the new key before waiting for any previous policy's session to close. */
+  private async startWithPolicy(file: TFile, profile: AgentProfile, key: string): Promise<LiveSession> {
+    for (const [oldKey, pending] of [...this.live]) {
+      if (oldKey.split('\u0000')[1] !== file.path) continue;
+      const live = await pending.catch(() => undefined);
+      if (!live || live.profile.name !== profile.name) continue;
+      if (live.busy) throw new Error('Inline tools changed. Wait for the current request to finish before sending another.');
+      await this.closeKey(oldKey);
+    }
+    return this.start(file, profile, key);
   }
 
   private async start(file: TFile, profile: AgentProfile, key: string): Promise<LiveSession> {
@@ -228,15 +241,29 @@ export class MentionAgents {
       peer: (note) => presence.peer(note),
       hidden: (note) => hiddenRange(note, current()),
     });
+    const policy = inlinePolicy(profile);
+    const sessionKey = inlineSessionKey(profile);
+    const onPermission = (request: Parameters<PermissionPrompts['ask']>[0]) => this.prompts.ask(request, { agent: displayName(profile), notePath: file.path });
+    const toolSet = tools.tools;
+    if (policy?.shell) toolSet.tools.push(inlineCommandTool(vaultRoot(this.app), onPermission, policy.shellApproval, parseEnv(profile.env)));
+    let instructions = INSTRUCTIONS;
+    if (policy) {
+      if (policy.shell) instructions = instructions.replace(
+        '- You cannot change any other file. You have no file-editing tools and no shell, and the duet tools work only on this note.',
+        `- Edit the current note with duet note tools. For external queries or scripts, use duet.run_command, which runs on the host with Obsidian's OS permissions, outside the native Codex sandbox. The native sandbox's read-only mode does not restrict this command tool; determine access from actual tool results. ${policy.shellApproval === 'yolo' ? 'The user enabled YOLO, so commands run without approval prompts.' : 'The user must approve every command.'} Do not edit this note with a command; that bypasses its live editing and undo.`,
+      );
+      instructions += `\n\nOptional tools: native web search is ${policy.webSearch ? 'enabled if supported by the provider' : 'disabled'}. Only the configured MCP tools are available. Shell is ${policy.shell ? `available through duet.run_command (${policy.shellApproval === 'yolo' ? 'YOLO: no approval prompts' : 'ask before each invocation'})` : 'disabled'}.`;
+    }
     const session = await startAgent(this.app, {
       profile,
-      instructions: INSTRUCTIONS,
+      instructions,
       access: 'read-only',
-      resume: this.sessions[file.path]?.[profile.name],
-      tools: tools.tools,
-      onPermission: (request) => this.prompts.ask(request, { agent: displayName(profile), notePath: file.path }),
+      resume: this.sessions[file.path]?.[sessionKey],
+      tools: toolSet,
+      inlineTools: policy,
+      onPermission,
     });
-    (this.sessions[file.path] ??= {})[profile.name] = session.id;
+    (this.sessions[file.path] ??= {})[sessionKey] = session.id;
     await this.options.save();
 
     const live = new LiveSession(session, profile, file, presence, tools);
