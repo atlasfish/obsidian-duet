@@ -79,6 +79,12 @@ Write `@claude` or `@codex` and a request, then press Enter at the end of the li
 - **Stop:** run **Duet: Stop the agent in this note**. While a mention agent works, the status bar says so, for example `claude working in Ideas`; select it to open the note.
 - **Start over:** run **Duet: Forget the mention conversation in this note**.
 
+### Optional request styling
+
+Copy [`docs/snippets/duet-requests.css`](docs/snippets/duet-requests.css) to your vault's `.obsidian/snippets/` folder and enable **duet-requests** under **Settings → Appearance → CSS snippets**. It styles editor lines containing a configured agent tag with smaller muted text, a subtle background, and a rounded border. The agent pill keeps its own color. This does not change the Markdown or mention trigger.
+
+In Reading view, this snippet styles paragraphs containing an agent tag. Keep each request in its own paragraph, with a blank line before and after it. Tight list items without a paragraph wrapper are not covered by the Reading view rule; Live Preview still styles their request line.
+
 ### Conversation Notes
 
 Run **Duet: New conversation with claude** (or the command of another agent), or select the ribbon button, which starts one with your first agent. You get a note with a message box at the bottom. The note records the conversation: your messages, the agent's replies, and its tool calls in collapsed sections. It takes its name from your first message.

@@ -1,0 +1,19 @@
+/* Duet request lines: smaller muted text in a rounded frame.
+ * Live Preview styles each editor line containing a configured agent tag.
+ * Reading view styles the containing paragraph: keep each request in its own paragraph.
+ */
+.markdown-source-view.mod-cm6 .cm-line:has(.duet-tag),
+.markdown-preview-view p:has(.duet-tag) {
+  font-size: calc(var(--font-text-size, 16px) * 0.9);
+  color: var(--text-muted);
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 0.3em 0.65em;
+}
+
+/* Keep the agent pill distinct while muting formatted request text. */
+.markdown-source-view.mod-cm6 .cm-line:has(.duet-tag) span:not(.duet-tag),
+.markdown-preview-view p:has(.duet-tag) :is(a, strong, em) {
+  color: inherit;
+}
