@@ -1,13 +1,16 @@
 import { Notice, type TFile } from 'obsidian';
 import type * as Y from 'yjs';
 import type { AgentEvent, AgentSession } from 'yami/agent';
-import { activity, type CollabHub, EditorBinding, LiveRegion, type NoteAgent, type NoteSessions, type NoteSessionSetup, type ObsidianYami, Presence, type SessionIds, type SharedNote } from 'yami/obsidian';
+import { activity, type CollabHub, EditorBinding, LiveRegion, type NoteAgent, type NoteSessionSetup, type ObsidianYami, PermissionPrompts, Presence, type SessionIds, type SharedNote, vaultRoot } from 'yami/obsidian';
 import { calloutHeader, isCalloutHeader, renderCallout, type ReplyState } from './callout.ts';
 import { lineAt, type NoteComments, passage, type Thread } from './comments/model.ts';
 import type { CommentStore } from './comments/store.ts';
 import type { TriggeredMention } from './enter-trigger.ts';
 import { NoteTools, PLACEHOLDER } from './note-tools.ts';
-import { type AgentProfile, displayName } from './settings.ts';
+import { type AgentProfile, displayName, parseEnv } from './settings.ts';
+import { inlineCommandTool } from './inline-command.ts';
+import { inlinePolicy } from './inline-tools.ts';
+import { InlineSessions } from './inline-sessions.ts';
 import type { VaultSkills } from './skills/vault-skills.ts';
 
 const INSTRUCTIONS = `You are running inside Obsidian, the note-taking app, through the Duet plugin. Your working directory is the root of the user's vault.
@@ -114,23 +117,35 @@ export interface MentionOptions {
  */
 export class MentionAgents {
   private readonly hub: CollabHub;
-  private readonly notes: NoteSessions<LiveSession>;
+  private readonly notes: InlineSessions<LiveSession>;
+  private readonly prompts: PermissionPrompts;
 
   constructor(
     private readonly yami: ObsidianYami,
     private readonly options: MentionOptions,
   ) {
     this.hub = yami.hub;
-    this.notes = yami.noteSessions({ ids: options.ids, save: (ids) => options.save(ids), setup: (note) => this.setup(note) });
+    this.prompts = new PermissionPrompts(yami.plugin.app);
+    this.notes = new InlineSessions(yami, options.ids, (ids) => options.save(ids), (note) => this.setup(note));
   }
 
   private setup({ file, agent }: NoteAgent): NoteSessionSetup<LiveSession> {
     const profile = this.options.profile(agent);
     if (!profile) throw new Error(`Duet has no agent named ${agent}.`);
     const live = new LiveSession(profile, file, this.hub, this.yami.animate, this.options.comments);
+    const policy = inlinePolicy(profile);
+    const onPermission = (request: Parameters<PermissionPrompts['ask']>[0]) => this.prompts.ask(request, { agent: displayName(profile), notePath: file.path });
+    const tools = live.tools.tools;
+    if (policy?.shell) tools.tools.push(inlineCommandTool(vaultRoot(this.yami.plugin.app), onPermission, policy.shellApproval, parseEnv(profile.env)));
+    let instructions = INSTRUCTIONS;
+    if (policy?.shell) instructions = instructions.replace(
+      '- You cannot change any other file. You have no file-editing tools and no shell, and the duet tools work only on this note.',
+      `- Direct note edits use the duet note tools. External queries and scripts use duet.run_command. ${policy.shellApproval === 'yolo' ? 'The user enabled YOLO: commands run without approval prompts.' : 'The user approves each command.'} Do not edit this note with a command; that bypasses live editing and undo.`,
+    );
+    if (policy) instructions += `\n\nOptional tools: native web search is ${policy.webSearch ? 'enabled when supported by the provider' : 'disabled'}. Only the configured MCP tools are available. Shell is ${policy.shell ? 'available through duet.run_command' : 'disabled'}.`;
     return {
       // Claude Code gets the vault's skill set as a plugin of its agent; Codex takes it here, as a skill root of the session.
-      options: { instructions: INSTRUCTIONS, access: 'read-only', tools: live.tools.tools, skills: this.options.skills.sessionSkills(profile) },
+      options: { instructions, access: 'read-only', tools, skills: this.options.skills.sessionSkills(profile), ...(policy && { onPermission }) },
       state: live,
       started: (session) => {
         live.session = session;
@@ -149,7 +164,7 @@ export class MentionAgents {
     const reply: Reply = { title: displayName(profile), note: undefined, region: undefined, streaming: '', message: '', line: undefined };
     let live: LiveSession;
     try {
-      const [note, started] = await Promise.all([this.hub.acquire(file, reply), this.notes.session(file.path, profile.name)]);
+      const [note, started] = await Promise.all([this.hub.acquire(file, reply), this.notes.session(file.path, profile)]);
       live = started.state;
       live.profile = profile;
       reply.note = note;
@@ -221,7 +236,7 @@ export class MentionAgents {
     const reply: Reply = { title: displayName(profile), note: undefined, region: undefined, streaming: '', message: '', line: undefined, thread: { id: threadId, file, agent: profile.name } };
     let live: LiveSession;
     try {
-      const [note, started] = await Promise.all([this.hub.acquire(file, reply), this.notes.session(file.path, profile.name)]);
+      const [note, started] = await Promise.all([this.hub.acquire(file, reply), this.notes.session(file.path, profile)]);
       live = started.state;
       live.profile = profile;
       reply.note = note;
