@@ -18,7 +18,7 @@ const INSTRUCTIONS = `You are running inside Obsidian, the note-taking app, thro
 The user calls you by writing @ and your name with a request on a line of a note. Each message gives the note's path, its text, and the request. In the note text, the line ${PLACEHOLDER} stands for the request line and the callout that holds your reply.
 
 What you can change:
-- You can change only the note that the request is in. Change it with the duet tools: read_note, edit_note for targeted changes, and write_note for a broad rewrite. The user sees each edit as you make it and may type at the same time.
+- For note edits, you can change only the note that the request is in. Change it with the duet tools: read_note, edit_note for targeted changes, and write_note for a broad rewrite. The user sees each edit as you make it and may type at the same time.
 - You cannot change any other file. You have no file-editing tools and no shell, and the duet tools work only on this note.
 - You can read other files in the vault, and search them, when the request needs them.
 - Do not try to change the request line or your reply callout. The plugin writes your reply.
@@ -140,7 +140,7 @@ export class MentionAgents {
     let instructions = INSTRUCTIONS;
     if (policy?.shell) instructions = instructions.replace(
       '- You cannot change any other file. You have no file-editing tools and no shell, and the duet tools work only on this note.',
-      `- Direct note edits use the duet note tools. External queries and scripts use duet.run_command. ${policy.shellApproval === 'yolo' ? 'The user enabled YOLO: commands run without approval prompts.' : 'The user approves each command.'} Do not edit this note with a command; that bypasses live editing and undo.`,
+      `- Direct note edits use the duet note tools. External queries and scripts use duet.run_command, which runs with Obsidian's host OS permissions outside Codex's native sandbox. Determine command access from its execution results. ${policy.shellApproval === 'yolo' ? 'The user enabled YOLO: commands run without approval prompts.' : 'The user approves each command.'} Do not edit this note with a command; that bypasses live editing and undo.`,
     );
     if (policy) instructions += `\n\nOptional tools: native web search is ${policy.webSearch ? 'enabled when supported by the provider' : 'disabled'}. Only the configured MCP tools are available. Shell is ${policy.shell ? 'available through duet.run_command' : 'disabled'}.`;
     return {
