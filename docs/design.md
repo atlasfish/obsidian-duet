@@ -4,7 +4,7 @@ These notes record the decisions behind Duet. The agent sessions, the shared doc
 
 ## What Duet is
 
-Duet is an Obsidian plugin built on `yami`. It calls `createYami` from `yami/obsidian` with one agent for each profile, and adds no modules. Yami gives it the shared-document hub, the conversation notes with their commands and ribbon icon, the approval prompts, the status bar, the Stop and Undo commands, and the harness sessions of mentions. `yami/agent` starts and drives Claude Code and Codex sessions, with one event model for both.
+Duet is an Obsidian plugin built on `yami`. It calls `createYami` from `yami/obsidian` with one agent for each profile, adds no modules, and leaves the built-in modules out (`wikiModule: false`, `threads: false`) with the commands of sessions, of the wiki, and New module: each of those is another plugin's one thing (Yami Wiki, Yami Threads). Its conversation notes carry `plugin: duet`, so those plugins and Duet share a vault with each on its own Yami. Yami gives it the shared-document hub, the conversation notes with their commands and ribbon icon, the approval prompts, the status bar, the Stop and Undo commands, and the harness sessions of mentions. `yami/agent` starts and drives Claude Code and Codex sessions, with one event model for both.
 
 Duet adds what is its own:
 
