@@ -161,11 +161,12 @@ Limits:
 
 Duet runs on Yami, which every Yami plugin shares. When Duet starts, Yami adds these to your vault:
 
-- **Files:** `Yami.base`, a base that lists Yami's modules and sessions; `internal/yami/skills/run/SKILL.md`, the base skill of Yami's sessions; and `internal/wiki/`, the documents of Yami's wiki module (its ledger, its policies, its promises and its ingest skill). Yami never overwrites a file that you edited. You cannot turn these files off.
-- **Folder colors:** `internal/` is gray in the file explorer, and the folders of each module have the module's color.
-- **Commands:** besides the conversation commands, Yami adds commands for sessions (run, resume, stop and kill the session in the editor), for the wiki (search, lint, versions, ingest and more), and **New module**.
+- **Files:** `Yami.base`, a base that lists Yami's modules and sessions, and `internal/yami/skills/run/SKILL.md`, the base skill of Yami's sessions. Duet has no module, so the base lists none of its own, and the skill runs no session; both are there for the Yami plugins that have modules, such as [Yami Wiki](https://github.com/nathanaday/yami/tree/main/plugins/yami-wiki). Yami never overwrites a file that you edited.
+- **Commands:** the conversation commands only. The commands of the wiki, of the sessions, and **New module** belong to the Yami plugin that holds the module.
 - **Status bar:** an item that says which agents work, in mentions and in conversation notes.
-- **Agent tools and skills:** every agent in a conversation note gets Yami's tools, such as `wiki_search`, and Yami's skills, such as `/wiki:ingest`. A mention agent gets only Duet's note tools, and no skills.
+- **Conversation notes** carry `plugin: duet` in their properties, so that Yami Wiki or Yami Threads in the same vault leave them to Duet, and Duet leaves theirs alone. A note from an earlier Duet has no `plugin`; it goes to the Yami plugin that loaded first, which is Duet unless you enabled another one before it. Add `plugin: duet` to such a note to pin it.
+
+Before 0.5.0, Duet also installed Yami's wiki module (`internal/wiki/`, the wiki commands, and the `wiki_search` tools of its agents) and the threads module. Those are now Yami Wiki's and Yami Threads'. The folders they wrote stay in your vault; delete `internal/wiki/` and `internal/threads/` if you do not install those plugins.
 
 ### Command ids
 
@@ -217,7 +218,7 @@ Work happens on the `preview` branch. `main` takes changes only through a pull r
 
 Obsidian reads `manifest.json` from `main`. Until the release job ends, about a minute, `main` names a version with no release, and an install in that minute fails once.
 
-Duet is built on [Yami](https://github.com/nathanaday/yami). `createYami` from `yami/obsidian` gives Duet the shared documents, the conversation notes with their commands, the approval prompts and the status bar, and `yami/esbuild` gives the bundle options and the stylesheet. Duet adds the mentions, the agent profiles and the settings, the contribution ledger and the lens, and `plugin.api`. `package.json` takes `yami` from a release of the library (the `.tgz` of its GitHub release), so `npm install` needs no checkout of Yami. The design notes are in [docs/design.md](docs/design.md).
+Duet is built on [Yami](https://github.com/nathanaday/yami). `createYami` from `yami/obsidian` gives Duet the shared documents, the conversation notes with their commands, the approval prompts and the status bar, and `yami/esbuild` gives the bundle options and the stylesheet. Duet leaves the built-in modules out (`wikiModule: false`, `threads: false`) and adds only the conversation commands. Duet adds the mentions, the agent profiles and the settings, the contribution ledger and the lens, and `plugin.api`. `package.json` takes `yami` from a release of the library (the `.tgz` of its GitHub release), so `npm install` needs no checkout of Yami; a Duet release that takes a new library needs that release to exist first. The design notes are in [docs/design.md](docs/design.md), and the checks and releases of every Yami repository in [docs/releasing.md](https://github.com/nathanaday/yami/blob/main/docs/releasing.md) of the yami repository.
 
 ## License
 

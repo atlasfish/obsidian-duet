@@ -1,6 +1,6 @@
 {
   "name": "obsidian-duet",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Work with Claude Code or Codex in your Obsidian notes.",
   "license": "MIT",
   "type": "module",
@@ -15,7 +15,7 @@
     "set-version": "node scripts/set-version.mjs"
   },
   "dependencies": {
-    "yami": "https://github.com/nathanaday/yami/releases/download/yami-0.19.0/yami-0.19.0.tgz"
+    "yami": "https://github.com/nathanaday/yami/releases/download/yami-0.20.0/yami-0.20.0.tgz"
   },
   "devDependencies": {
     "@codemirror/language": "^6.12.4",
