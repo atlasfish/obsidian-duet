@@ -33,11 +33,17 @@ export default class DuetPlugin extends Plugin {
     this.sessions = data.sessions ?? {};
 
     this.agents = new ProfileAgents(this.app, () => this.settings.profiles);
+    // Duet does one thing, the conversations. The wiki is Yami Wiki's and threads is Yami Threads'; each
+    // runs on its own Yami beside Duet, and keeps its own conversation notes by the note's `plugin`.
     this.yami = createYami(this, {
       agents: this.agents.entries(),
       conversationFolder: () => this.settings.conversationFolder,
       idleMinutes: () => this.settings.idleMinutes,
       animate: () => this.settings.animate,
+      wikiModule: false,
+      threads: false,
+      commands: { sessions: false, wiki: false, modules: false },
+      folderColors: false,
     });
 
     this.ledger = new ContributionLedger(this.app);
