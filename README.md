@@ -38,7 +38,7 @@ The answer streams into a callout under the line. For Codex, write `@codex` inst
 
 ### Mentions
 
-Write `@claude` or `@codex` and a request, then press Enter at the end of the line. The tag can follow other text on the line. When you type the tag of an agent, it changes to a pill in the agent's color, so you know that the tag will work.
+Write `@claude` or `@codex` and a request, then press Enter at the end of the line. The tag can follow other text on the line. `@claude/<skill>` runs the request with one of your skills (see [Skills and agents in your vault](#skills-and-agents-in-your-vault)). When you type the tag of an agent, it changes to a pill in the agent's color, so you know that the tag will work.
 
 ![A mention answers in a callout under the line](docs/images/mention-reply.png)
 
@@ -90,6 +90,16 @@ Each thread shows its passage, its comments, and a reply box. Select the passage
 
 Duet keeps the comments in the hidden folder `.duet/comments/` in your vault, one file for each note that has comments. The highlights follow your edits, also edits made while Obsidian was closed, by comparing the note with the text it saw last.
 
+### Skills and agents in your vault
+
+Turn on **Use the skills and agents in this vault** in the settings. Then every `SKILL.md` and every `AGENT.md` in a named folder of your vault is a skill or an agent of Duet's agents, and the folder's name is its name. A folder `Writing/Summarize/SKILL.md` gives the skill `summarize`. Files under `internal/` (Yami's modules) and in the conversation folder do not count. The settings list what Duet found, and what it could not use and why.
+
+- **In a conversation note:** type `/` and pick `/vault:summarize`, as you pick any other skill of the agent.
+- **In a mention:** write `@claude/summarize make this shorter`. The tag pill shows the skill. While you type `@claude/`, Obsidian suggests the skills and agents with their descriptions. The names of your own installed skills and agents work the same way: `~/.claude/skills` and `~/.claude/agents` when the agent loads your MCP servers and plugins, and `~/.codex/skills` for Codex.
+- **Agents:** an `AGENT.md` has a `description` in its front matter, and its text is the agent's prompt. `tools` and `model` are passed on, and `access: read-only` gives it reading tools only. It runs as a subagent of Claude Code: `@claude/skeptic check this plan` hands the request to it, and in a conversation Claude Code picks it when its description fits.
+
+Duet copies the skill folders into the hidden folder `.duet/skills/` as one skill set, and keeps the copy current as you edit. Claude Code loads it in mentions and in conversation notes. Codex loads it in mentions; a Codex conversation note needs an option of Yami that does not exist yet, so it does not see the vault's skills. Your installed skills and agents reach the agents through their own folders, as they do in a terminal.
+
 ### Contribution lens
 
 Duet records which text of a note its agents wrote. To see it, select the lens button in the ribbon, or run **Duet: Toggle contribution lens**. Text that a Duet agent wrote gets a cyan mark. Hold the pointer over a mark to see which agent wrote it and when. All other text stays plain.
@@ -125,6 +135,7 @@ General settings:
 |---|---|
 | Conversation folder | Where new conversation notes go. The default is `conversations`. |
 | Comment color | The highlight of the passages you commented on. |
+| Use the skills and agents in this vault | Every `SKILL.md` and `AGENT.md` in a named folder of the vault is a skill or an agent. Off by default. |
 | Show agents typing | Agents type their edits into open notes. Off: edits appear at once. Duet also turns this off when your system asks for reduced motion. |
 | Close idle agents after | Minutes without activity before an agent process stops. The next message continues the same conversation. |
 

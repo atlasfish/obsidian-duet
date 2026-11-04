@@ -8,6 +8,7 @@ import type { CommentStore } from './comments/store.ts';
 import type { TriggeredMention } from './enter-trigger.ts';
 import { NoteTools, PLACEHOLDER } from './note-tools.ts';
 import { type AgentProfile, displayName } from './settings.ts';
+import type { VaultSkills } from './skills/vault-skills.ts';
 
 const INSTRUCTIONS = `You are running inside Obsidian, the note-taking app, through the Duet plugin. Your working directory is the root of the user's vault.
 
@@ -103,6 +104,7 @@ export interface MentionOptions {
   save(ids: SessionIds): Promise<void>;
   profile(name: string): AgentProfile | undefined;
   comments: CommentStore;
+  skills: VaultSkills;
 }
 
 /**
@@ -127,7 +129,8 @@ export class MentionAgents {
     if (!profile) throw new Error(`Duet has no agent named ${agent}.`);
     const live = new LiveSession(profile, file, this.hub, this.yami.animate, this.options.comments);
     return {
-      options: { instructions: INSTRUCTIONS, access: 'read-only', tools: live.tools.tools, skills: [] },
+      // Claude Code gets the vault's skill set as a plugin of its agent; Codex takes it here, as a skill root of the session.
+      options: { instructions: INSTRUCTIONS, access: 'read-only', tools: live.tools.tools, skills: this.options.skills.sessionSkills(profile) },
       state: live,
       started: (session) => {
         live.session = session;
@@ -165,11 +168,19 @@ export class MentionAgents {
       if (reply.note) this.hub.release(reply.note, reply);
       return;
     }
+    const invocation = mention.skill === undefined ? undefined : this.options.skills.resolve(profile, mention.skill);
+    if (mention.skill !== undefined && !invocation) {
+      void this.finish(live, reply, { kind: 'failed', text: '', error: `@${profile.name} has no skill or agent named ${mention.skill}.` });
+      return;
+    }
     live.replies.push(reply);
     const text = await live.tools.show((note) => hiddenRange(note, reply));
     const prompt = [
+      // A skill is a slash command, which must start the message. Claude Code and Yami's Codex adapter put its instructions in the turn.
+      ...(invocation?.kind === 'skill' ? [`/${invocation.command}`] : []),
       `Note: ${file.path} (line ${mention.line + 1})`,
       text === undefined ? 'The note has not changed since you last read it.' : `<note>\n${text}\n</note>`,
+      ...(invocation?.kind === 'agent' ? [`Give this request to your subagent "${invocation.name}" with the Agent tool, and relay its result as your reply.`] : []),
       `Request: ${mention.prompt}`,
     ].join('\n\n');
     await live.session.send(prompt).catch((error: Error) => {

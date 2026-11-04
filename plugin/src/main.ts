@@ -10,6 +10,8 @@ import { enterTrigger } from './enter-trigger.ts';
 import { mentionTags, tagPostProcessor, type TagStyle } from './mention-tags.ts';
 import { MentionAgents } from './mentions.ts';
 import { displayName, type DuetSettings, DuetSettingTab, profileNamed, upgradeSettings } from './settings.ts';
+import { SkillSuggest } from './skills/suggest.ts';
+import { VaultSkills } from './skills/vault-skills.ts';
 
 interface PluginData {
   settings: DuetSettings;
@@ -24,6 +26,8 @@ export default class DuetPlugin extends Plugin {
   ledger!: ContributionLedger;
   lens!: ContributionLens;
   comments!: Comments;
+  vaultSkills!: VaultSkills;
+  private settingTab!: DuetSettingTab;
   /** For other plugins: `app.plugins.getPlugin('duet')?.api`. */
   api!: DuetApi;
   private sessions: SessionIds = {};
@@ -34,7 +38,16 @@ export default class DuetPlugin extends Plugin {
     this.settings = upgradeSettings(data.settings);
     this.sessions = data.sessions ?? {};
 
-    this.agents = new ProfileAgents(this.app, () => this.settings.profiles);
+    this.vaultSkills = new VaultSkills(this.app, {
+      enabled: () => this.settings.vaultSkills,
+      exclude: () => [this.settings.conversationFolder],
+      onChange: () => this.vaultSkillsChanged(),
+    });
+    this.agents = new ProfileAgents(
+      this.app,
+      () => this.settings.profiles,
+      (profile) => ({ key: this.vaultSkills.key, sdkOptions: this.vaultSkills.sdkOptions(profile) }),
+    );
     // Duet does one thing, the conversations. The wiki is Yami Wiki's and threads is Yami Threads'; each
     // runs on its own Yami beside Duet, and keeps its own conversation notes by the note's `plugin`.
     this.yami = createYami(this, {
@@ -82,7 +95,10 @@ export default class DuetPlugin extends Plugin {
       },
       profile: (name) => this.profile(name),
       comments: this.comments.store,
+      skills: this.vaultSkills,
     });
+    this.vaultSkills.install(this);
+    this.registerEditorSuggest(new SkillSuggest(this.app, this.vaultSkills, () => this.settings.profiles));
 
     this.lensButton = this.addRibbonIcon('highlighter', 'Toggle contribution lens', () => void this.toggleLens());
     this.lensButton.addClass('duet-lens-toggle');
@@ -120,7 +136,8 @@ export default class DuetPlugin extends Plugin {
       },
     });
 
-    this.addSettingTab(new DuetSettingTab(this.app, this));
+    this.settingTab = new DuetSettingTab(this.app, this);
+    this.addSettingTab(this.settingTab);
   }
 
   onunload(): void {
@@ -130,14 +147,25 @@ export default class DuetPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.persist();
+    this.applyAgents();
+    this.comments.syncAgentCommands();
+    this.comments.marks.refresh();
+    this.refreshEditors();
+    this.vaultSkills.refresh();
+  }
+
+  /** The vault's skills or agents changed: the agents get new options, and the settings tab shows the list. */
+  private vaultSkillsChanged(): void {
+    this.applyAgents();
+    if (this.settingTab.containerEl.isConnected) this.settingTab.update();
+  }
+
+  private applyAgents(): void {
     try {
       this.yami.setAgents(this.agents.entries());
     } catch (error) {
       new Notice(`Duet could not apply the agents: ${(error as Error).message}`);
     }
-    this.comments.syncAgentCommands();
-    this.comments.marks.refresh();
-    this.refreshEditors();
   }
 
   async toggleLens(): Promise<void> {

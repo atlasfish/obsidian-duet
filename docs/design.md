@@ -11,6 +11,7 @@ Duet adds what is its own:
 - **Mentions.** The user writes `@claude` and a request on a line of a note. The agent replies in a callout under the line. It can change only that note, through Duet's note tools.
 - **Agent profiles.** The settings hold one profile for each tag: the harness, the program path, environment variables, the model, the effort, the approval setting, and the color. `plugin/src/agents.ts` turns a profile into a Yami agent and keeps it until the profile changes.
 - **Comments.** The user comments on a highlighted passage of a note, and a comment that tags an agent runs it on the passage, in the note's mention session.
+- **The vault's skills and agents.** With a setting, every `SKILL.md` and `AGENT.md` in a named folder is a skill or an agent of Duet's agents.
 - **The contribution ledger and the lens.** They record and show which text a Duet agent wrote.
 - **The API for other plugins.** `plugin.api` starts conversation notes.
 
@@ -67,6 +68,14 @@ A comment thread is a range of a note and a list of comments. The comments live 
 **Every comment at once.** `handleThreads` sends every thread whose last comment is the person's in one turn, each with its id, and the agent answers through the `reply_to_comment` tool of the note tools. One turn costs one read of the note instead of one for each thread, and the agent can see how its changes to one passage affect another. The final message of that turn is shown as a notice, not posted, since it belongs to no thread.
 
 **The view.** The Comments view (`view.ts`) is an `ItemView` in the right sidebar that follows the active note. It renders the thread list again on each change of the store or the note, and keeps the draft and the caret of the reply box that has the focus across renders, because an agent's streaming reply renders many times while the person types.
+
+## Skills and agents in the vault
+
+**A copy, not a search path.** Claude Code finds skills in a plugin's `skills/<name>/SKILL.md`, and Yami's skill sets have that shape (`SessionOptions.skills`). The vault's skills can be anywhere, so Duet copies each recognized folder into one set, `.duet/skills/vault/skills/<name>/`, with every file beside the `SKILL.md`, so paths inside a skill keep working. A symbolic link would be cheaper, but the harnesses' loaders do not all follow one. The set's folder name is `vault`, so a skill is `/vault:<name>`, in the form of every other skill set. The copy follows the vault's file events; a change to a skill's files changes the agents' key, so `ProfileAgents` builds new agents and Yami closes the old sessions once idle, and the next session loads the new text. `plugin/src/skills/forms.ts` holds the pure part: which files count and what their front matter says.
+
+**Claude Code gets the set and the agents through the Agent SDK.** `ClaudeAgentOptions.sdkOptions` reaches every session of the agent, in mentions and in conversation notes: the set as a `plugins` entry, and each `AGENT.md` as an entry of `agents`, so a vault agent is a subagent without a folder in `~/.claude`. Yami's own `skills` preference is set by Yami for each agent, so Duet does not touch it. A mention session, which Duet starts itself, passes the set as `skills` for Codex; a Codex conversation note is Yami's, and Yami has no option yet for a host's skill sets, so Codex conversations do not see the vault's skills. The vault's agents reach Claude Code only, since the SDK option is Claude Code's.
+
+**`@claude/<name>` names a skill or an agent.** `findTags` reads the suffix, so the pill covers it and the Enter trigger passes it. A skill becomes the first line of the message, `/vault:<name>` or `/<name>` for an installed skill, because a slash command must start a message; the note and the request follow. An agent becomes a line that asks the session to give the request to that subagent. An unknown name fails the reply with the names it would accept. The suggestions (`SkillSuggest`, an `EditorSuggest`) list the vault's items and the installed ones, read from the harness's folders with the profile's `CLAUDE_CONFIG_DIR` or `CODEX_HOME`; Claude Code's installed items show only when the profile loads the user's settings, since the session loads them only then.
 
 ## Contribution ledger
 

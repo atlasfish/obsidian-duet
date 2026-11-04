@@ -21,11 +21,14 @@ Comments on highlighted text, as in Google Docs and Word. A comment that tags an
 
 With a setting on, every `SKILL.md` and `AGENT.md` in a named folder of the vault is a skill or an agent of Duet's agents.
 
-- [ ] **Setting.** `Use the skills and agents in this vault`, off by default. The settings tab lists what Duet recognized and what it could not use.
-- [ ] **Recognition.** Scan the vault for `<folder>/SKILL.md` and `<folder>/AGENT.md`, outside `internal/` (Yami's modules have those) and outside the conversation folder. The folder's name is the skill's or the agent's name. Follow the vault's file events, so a new skill works at once.
-- [ ] **Skills reach the agents.** Duet mirrors the skill folders into one skill set, `.duet/skills/vault/`, which Claude Code loads as a plugin of every session, in mentions and in conversation notes, and Codex gets in mention sessions. Codex conversation notes need a Yami option for a host's skill sets; until then, the README says so.
-- [ ] **Agents reach Claude Code.** Each `AGENT.md` becomes a subagent of every Claude Code session (`agents` of the Agent SDK): the front matter gives the description, tools, and model, and the body is its prompt.
-- [ ] **Slash commands.** The `/` menu of a conversation note lists the vault's skills as `/vault:<name>`, as it lists the other skills of the agent.
-- [ ] **Inline.** `@claude/<skill> request` runs the mention with that skill, and `@claude/<agent> request` sends the request to that subagent. The tag pill shows the suffix. The names of the user's own installed skills and agents (`~/.claude/skills`, `~/.claude/agents`, `~/.codex/skills`) work too.
-- [ ] **Suggestions.** While the user types `@claude/`, Obsidian suggests the skills and agents, with their descriptions.
-- [ ] README, design notes, unit tests.
+- [x] **Setting.** `Use the skills and agents in this vault`, off by default. The settings tab lists what Duet recognized and what it could not use.
+- [x] **Recognition.** Scan the vault for `<folder>/SKILL.md` and `<folder>/AGENT.md`, outside `internal/` (Yami's modules have those) and outside the conversation folder. The folder's name is the skill's or the agent's name. Follow the vault's file events, so a new skill works at once.
+- [x] **Skills reach the agents.** Duet mirrors the skill folders into one skill set, `.duet/skills/vault/`, which Claude Code loads as a plugin of every session, in mentions and in conversation notes, and Codex gets in mention sessions. Codex conversation notes need a Yami option for a host's skill sets; until then, the README says so.
+- [x] **Agents reach Claude Code.** Each `AGENT.md` becomes a subagent of every Claude Code session (`agents` of the Agent SDK): the front matter gives the description, tools, and model, and the body is its prompt.
+- [x] **Slash commands.** The `/` menu of a conversation note lists the vault's skills as `/vault:<name>`, as it lists the other skills of the agent.
+- [x] **Inline.** `@claude/<skill> request` runs the mention with that skill, and `@claude/<agent> request` sends the request to that subagent. The tag pill shows the suffix. The names of the user's own installed skills and agents (`~/.claude/skills`, `~/.claude/agents`, `~/.codex/skills`) work too.
+- [x] **Suggestions.** While the user types `@claude/`, Obsidian suggests the skills and agents, with their descriptions.
+- [x] README, design notes, unit tests.
+- [ ] Vault skills in Codex conversation notes: Yami needs an option for a host's skill sets (`createYami({ skills })`), then Duet passes the set there instead of `sdkOptions` and the mention option.
+- [ ] Vault agents for Codex, when Yami's Codex adapter offers subagents.
+- [ ] An end-to-end test in Obsidian with a skill folder in the test vault.

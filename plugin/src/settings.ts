@@ -34,6 +34,8 @@ export interface DuetSettings {
   lens: boolean;
   /** The highlight color of the person's comments. A passage that an agent changed takes the agent's color. */
   commentColor: string;
+  /** Every SKILL.md and AGENT.md in a named folder of the vault is a skill or an agent of the agents. */
+  vaultSkills: boolean;
 }
 
 /** The highlight color of comments until the person picks one. */
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: DuetSettings = {
   animate: true,
   lens: false,
   commentColor: DEFAULT_COMMENT_COLOR,
+  vaultSkills: false,
 };
 
 /** Fills in settings that older versions of the plugin did not save. */
@@ -137,6 +140,16 @@ export class DuetSettingTab extends PluginSettingTab {
           validate: (minutes) => (Number.isFinite(minutes) && minutes > 0 ? undefined : 'Enter a number of minutes greater than 0.'),
         },
       },
+      {
+        name: 'Use the skills and agents in this vault',
+        desc: 'A SKILL.md or AGENT.md in a named folder of the vault becomes a skill or an agent of every Duet agent. A skill is /vault:<folder> in a conversation, and @claude/<folder> in a note. An agent runs as a subagent of Claude Code.',
+        control: { type: 'toggle', key: 'vaultSkills' },
+      },
+      {
+        name: 'Recognized in this vault',
+        desc: this.recognized(),
+        visible: () => this.plugin.settings.vaultSkills,
+      },
       ...profiles.map((profile, index) => this.agentGroup(profile, index)),
       {
         name: 'Add agent',
@@ -160,6 +173,7 @@ export class DuetSettingTab extends PluginSettingTab {
       else if (key === 'animate') settings.animate = Boolean(value);
       else if (key === 'idleMinutes') settings.idleMinutes = Number(value);
       else if (key === 'commentColor') settings.commentColor = String(value) || DEFAULT_COMMENT_COLOR;
+      else if (key === 'vaultSkills') settings.vaultSkills = Boolean(value);
       await this.plugin.saveSettings();
       return;
     }
@@ -195,6 +209,17 @@ export class DuetSettingTab extends PluginSettingTab {
     // The heading shows the tag, and the program decides which approvals and options the agent offers.
     if (agent.field === 'harness') this.update();
     if (agent.field === 'name') this.updateAfterTyping();
+  }
+
+  /** The skills and agents that Duet found in the vault, and what it could not use, as one text. */
+  private recognized(): string {
+    const { skills, agents, problems } = this.plugin.vaultSkills;
+    const parts = [
+      skills.length ? `Skills: ${skills.map((skill) => skill.name).join(', ')}.` : 'No skill: no folder with a SKILL.md yet.',
+      agents.length ? `Agents: ${agents.map((agent) => agent.name).join(', ')}.` : 'No agent: no folder with an AGENT.md yet.',
+      ...problems.map((problem) => `Not used: ${problem}`),
+    ];
+    return parts.join(' ');
   }
 
   /** Refreshes the tab when the field that has focus loses it. A refresh while the user types would take the focus. */

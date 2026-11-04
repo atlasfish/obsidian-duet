@@ -255,3 +255,23 @@
 .duet-thread:not(.is-draft) .duet-reply:focus-within .duet-comment-actions {
   display: flex;
 }
+
+/* Suggestions of skills and agents after @claude/ */
+.duet-skill-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4-2);
+}
+
+.duet-skill-kind {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.duet-skill-description {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
