@@ -32,7 +32,12 @@ export interface DuetSettings {
   animate: boolean;
   /** The contribution lens marks the text that Duet agents wrote. */
   lens: boolean;
+  /** The highlight color of the person's comments. A passage that an agent changed takes the agent's color. */
+  commentColor: string;
 }
+
+/** The highlight color of comments until the person picks one. */
+export const DEFAULT_COMMENT_COLOR = '#f2c94c';
 
 export const DEFAULT_SETTINGS: DuetSettings = {
   profiles: [
@@ -43,6 +48,7 @@ export const DEFAULT_SETTINGS: DuetSettings = {
   conversationFolder: 'conversations',
   animate: true,
   lens: false,
+  commentColor: DEFAULT_COMMENT_COLOR,
 };
 
 /** Fills in settings that older versions of the plugin did not save. */
@@ -80,7 +86,7 @@ export function profileNamed(profiles: AgentProfile[], name: string): AgentProfi
   return profiles.find((profile) => profile.name.toLowerCase() === tag);
 }
 
-export function displayName(profile: AgentProfile): string {
+export function displayName(profile: { name: string }): string {
   return profile.name.charAt(0).toUpperCase() + profile.name.slice(1);
 }
 
@@ -117,6 +123,11 @@ export class DuetSettingTab extends PluginSettingTab {
         control: { type: 'toggle', key: 'animate' },
       },
       {
+        name: 'Comment color',
+        desc: 'The highlight of a passage that you commented on. Select text in a note and choose Add comment. A passage that an agent changed takes the agent\'s color.',
+        control: { type: 'color', key: 'commentColor' },
+      },
+      {
         name: 'Close idle agents after',
         desc: 'Minutes without activity before an agent process stops. The next message continues the same conversation.',
         control: {
@@ -148,6 +159,7 @@ export class DuetSettingTab extends PluginSettingTab {
       if (key === 'conversationFolder') settings.conversationFolder = String(value).trim().replace(/^\/+|\/+$/g, '');
       else if (key === 'animate') settings.animate = Boolean(value);
       else if (key === 'idleMinutes') settings.idleMinutes = Number(value);
+      else if (key === 'commentColor') settings.commentColor = String(value) || DEFAULT_COMMENT_COLOR;
       await this.plugin.saveSettings();
       return;
     }

@@ -71,3 +71,187 @@
   background-color: rgba(var(--color-cyan-rgb), 0.15);
   color: var(--color-cyan);
 }
+
+/* Comments: a highlight for each thread, in the person's comment color or the color of the agent that changed the passage. */
+.duet-comment {
+  background-color: color-mix(in srgb, var(--duet-comment) 28%, transparent);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--duet-comment) 85%, transparent);
+  border-radius: 2px;
+  cursor: pointer;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.duet-comment.is-active {
+  background-color: color-mix(in srgb, var(--duet-comment) 50%, transparent);
+}
+
+.duet-comments {
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.duet-comments-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-3);
+}
+
+.duet-comments-title {
+  font-weight: var(--font-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duet-comments-count,
+.duet-comments-empty,
+.duet-comment-time,
+.duet-thread-changed {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.duet-comments-empty {
+  padding: var(--size-4-4) 0;
+  text-align: center;
+}
+
+.duet-thread {
+  position: relative;
+  margin-bottom: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-left: 3px solid var(--duet-comment);
+  border-radius: var(--radius-m);
+  background-color: var(--background-primary);
+}
+
+.duet-thread.is-active {
+  border-color: color-mix(in srgb, var(--duet-comment) 60%, var(--background-modifier-border));
+  border-left-color: var(--duet-comment);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--duet-comment) 40%, transparent);
+}
+
+.duet-thread-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--size-4-1) var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+}
+
+.duet-thread-passage {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px var(--size-4-2);
+  border-radius: var(--radius-s);
+  background-color: color-mix(in srgb, var(--duet-comment) 22%, transparent);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-tight);
+  cursor: pointer;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.duet-thread-passage.is-gone {
+  background: none;
+  color: var(--text-faint);
+  font-style: italic;
+  cursor: default;
+}
+
+.duet-thread-changed {
+  flex-basis: 100%;
+}
+
+.duet-thread-remove,
+.duet-comment-more {
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.duet-thread:hover .duet-thread-remove,
+.duet-comment-item:hover .duet-comment-more,
+.duet-thread-remove:focus-visible,
+.duet-comment-more:focus-visible {
+  opacity: 1;
+}
+
+.duet-comment-item {
+  padding: var(--size-4-1) 0;
+}
+
+.duet-comment-item + .duet-comment-item {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.duet-comment-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.duet-comment-author {
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-small);
+}
+
+.duet-comment-item.is-agent .duet-comment-author {
+  color: var(--duet-comment, var(--text-accent));
+}
+
+.duet-comment-time {
+  flex: 1 1 auto;
+}
+
+.duet-comment-body {
+  font-size: var(--font-ui-small);
+  overflow-wrap: anywhere;
+}
+
+.duet-comment-body > :first-child {
+  margin-top: 0;
+}
+
+.duet-comment-body > :last-child {
+  margin-bottom: 0;
+}
+
+.duet-comment-item.is-pending .duet-comment-body {
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.duet-comment-item.is-failed .duet-comment-error {
+  color: var(--text-error);
+}
+
+.duet-reply {
+  margin-top: var(--size-4-2);
+}
+
+.duet-reply-box,
+.duet-comment-edit {
+  width: 100%;
+  resize: none;
+  font-size: var(--font-ui-small);
+}
+
+.duet-comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-1);
+}
+
+.duet-thread:not(.is-draft) .duet-reply .duet-comment-actions {
+  display: none;
+}
+
+.duet-thread:not(.is-draft) .duet-reply:focus-within .duet-comment-actions {
+  display: flex;
+}

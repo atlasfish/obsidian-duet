@@ -74,6 +74,22 @@ When the agent changes a note that is open, you see its cursor in that note. Its
 
 ![Claude edits the open reading list while the conversation continues](docs/images/conversation-edit.png)
 
+### Comments
+
+Comment on a passage of a note, as in Google Docs or Word, and tag an agent to have it act on the comment.
+
+1. Select text in a note, then choose **Add comment** in the editor's menu, or run **Duet: Add a comment on the selection**.
+2. The passage gets a highlight, and the **Comments** view opens in the right sidebar with the new thread. Write your comment and press Enter.
+
+Each thread shows its passage, its comments, and a reply box. Select the passage to show it in the note. Select a highlight in the note to open its thread. From the menu of a comment, edit your own comment or remove any; the trash button removes a thread with its highlight.
+
+- **Ask an agent:** write `@claude` in a comment, for example `@claude shorten this`. The agent gets the note, the passage and the thread, and answers in the thread. It is asked to change only the highlighted passage, and can read the whole note for context. The reply streams into the thread while it works.
+- **Handle every comment:** run **Duet: Let Claude handle the comments in this note**, or the command of another agent. The agent gets every thread whose last comment is yours, in one turn, and replies in each thread.
+- **The agent's color:** when a Duet agent changes a highlighted passage, the highlight takes the agent's color, so you see which comments it acted on. Your own highlights use the **Comment color** of the settings.
+- **Limits:** the highlights show in the editor, not in Reading view. The comments are not an AI detector of anything: a highlight that changed color was changed by one of Duet's agents in a mention or a conversation.
+
+Duet keeps the comments in the hidden folder `.duet/comments/` in your vault, one file for each note that has comments. The highlights follow your edits, also edits made while Obsidian was closed, by comparing the note with the text it saw last.
+
 ### Contribution lens
 
 Duet records which text of a note its agents wrote. To see it, select the lens button in the ribbon, or run **Duet: Toggle contribution lens**. Text that a Duet agent wrote gets a cyan mark. Hold the pointer over a mark to see which agent wrote it and when. All other text stays plain.
@@ -108,6 +124,7 @@ General settings:
 | Setting | What it does |
 |---|---|
 | Conversation folder | Where new conversation notes go. The default is `conversations`. |
+| Comment color | The highlight of the passages you commented on. |
 | Show agents typing | Agents type their edits into open notes. Off: edits appear at once. Duet also turns this off when your system asks for reduced motion. |
 | Close idle agents after | Minutes without activity before an agent process stops. The next message continues the same conversation. |
 

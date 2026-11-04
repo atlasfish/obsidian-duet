@@ -6,14 +6,16 @@ The feature list of Duet, broken into steps. A step is checked when its code, it
 
 Comments on highlighted text, as in Google Docs and Word. A comment that tags an agent runs the agent on the passage.
 
-- [ ] **Store.** One file for each note at `.duet/comments/<note>.json`: the threads, each with its range in the note, its comments (author, text, time), and the agent that last changed the passage. The ranges follow edits as the contribution ledger's spans do: exactly while the note is shared, and by comparing texts otherwise.
-- [ ] **Add a comment.** The editor menu while text is selected, and a command, start a thread on the selection. The passage gets a highlight in the comment color of the settings.
-- [ ] **Comments view.** A view in the right sidebar lists the threads of the open note. Reply, edit your comment, remove a comment, remove a thread. A click on a highlight opens its thread; a click on a thread's passage selects it in the note.
-- [ ] **An agent in a comment.** A comment that tags an agent, such as `@claude`, runs the agent in the note's mention session with the note, the passage, and the thread. The reply streams into the thread. The agent is told to keep its changes to the passage.
-- [ ] **The agent's color.** When a Duet agent changes a highlighted passage, the highlight takes the agent's color.
-- [ ] **Handle every comment.** One command for each agent, `Let <agent> handle the comments in this note`, sends every thread that waits for an answer in one turn. The agent answers each thread with a tool.
-- [ ] **Settings.** The comment color.
-- [ ] README, design notes, unit tests.
+- [x] **Store.** One file for each note at `.duet/comments/<note>.json`: the threads, each with its range in the note, its comments (author, text, time), and the agent that last changed the passage. The ranges follow edits as the contribution ledger's spans do: exactly while the note is shared, and by comparing texts otherwise.
+- [x] **Add a comment.** The editor menu while text is selected, and a command, start a thread on the selection. The passage gets a highlight in the comment color of the settings.
+- [x] **Comments view.** A view in the right sidebar lists the threads of the open note. Reply, edit your comment, remove a comment, remove a thread. A click on a highlight opens its thread; a click on a thread's passage selects it in the note.
+- [x] **An agent in a comment.** A comment that tags an agent, such as `@claude`, runs the agent in the note's mention session with the note, the passage, and the thread. The reply streams into the thread. The agent is told to keep its changes to the passage.
+- [x] **The agent's color.** When a Duet agent changes a highlighted passage, the highlight takes the agent's color.
+- [x] **Handle every comment.** One command for each agent, `Let <agent> handle the comments in this note`, sends every thread that waits for an answer in one turn. The agent answers each thread with a tool.
+- [x] **Settings.** The comment color.
+- [x] README, design notes, unit tests.
+- [ ] Highlights in Reading view, as the lens marks sections.
+- [ ] An end-to-end test in Obsidian (`test/obsidian`), which needs a real agent.
 
 ## Skills and agents in the vault
 

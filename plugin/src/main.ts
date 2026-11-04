@@ -3,6 +3,7 @@ import { MarkdownView, Notice, Plugin, type TFile } from 'obsidian';
 import { createYami, type ObsidianYami, type SessionIds } from 'yami/obsidian';
 import { ProfileAgents } from './agents.ts';
 import type { DuetApi } from './api.ts';
+import { Comments } from './comments/comments.ts';
 import { ContributionLedger } from './contributions/ledger.ts';
 import { ContributionLens } from './contributions/lens.ts';
 import { enterTrigger } from './enter-trigger.ts';
@@ -22,6 +23,7 @@ export default class DuetPlugin extends Plugin {
   mentions!: MentionAgents;
   ledger!: ContributionLedger;
   lens!: ContributionLens;
+  comments!: Comments;
   /** For other plugins: `app.plugins.getPlugin('duet')?.api`. */
   api!: DuetApi;
   private sessions: SessionIds = {};
@@ -70,6 +72,8 @@ export default class DuetPlugin extends Plugin {
       onTurnEnd: (path, callback) => conversations.onTurnEnd(path, callback),
     };
 
+    this.comments = new Comments(this, () => this.mentions);
+    this.comments.install();
     this.mentions = new MentionAgents(this.yami, {
       ids: this.sessions,
       save: (ids) => {
@@ -77,6 +81,7 @@ export default class DuetPlugin extends Plugin {
         return this.persist();
       },
       profile: (name) => this.profile(name),
+      comments: this.comments.store,
     });
 
     this.lensButton = this.addRibbonIcon('highlighter', 'Toggle contribution lens', () => void this.toggleLens());
@@ -120,6 +125,7 @@ export default class DuetPlugin extends Plugin {
 
   onunload(): void {
     void this.ledger.flush();
+    void this.comments.flush();
   }
 
   async saveSettings(): Promise<void> {
@@ -129,6 +135,8 @@ export default class DuetPlugin extends Plugin {
     } catch (error) {
       new Notice(`Duet could not apply the agents: ${(error as Error).message}`);
     }
+    this.comments.syncAgentCommands();
+    this.comments.marks.refresh();
     this.refreshEditors();
   }
 
