@@ -51,6 +51,8 @@ export interface NoteToolContext {
   peer(note: SharedNote): AgentPeer;
   /** The request line and the reply callout of the current turn. */
   hidden(note: SharedNote): { from: number; to: number } | undefined;
+  /** Posts the agent's reply in a comment thread of the note. Rejects when the thread is unknown. */
+  replyToComment(threadId: string, text: string): Promise<void>;
 }
 
 interface Seen {
@@ -81,8 +83,20 @@ export class NoteTools {
   get tools(): ToolSet {
     return {
       name: 'duet',
-      description: `Read and change the note that the user asked you in. In the note text, the line ${PLACEHOLDER} stands for the user's request and your reply, which stay where they are.`,
+      description: `Read and change the note that the user asked you in, and answer its comment threads. In the note text, the line ${PLACEHOLDER} stands for the user's request and your reply, which stay where they are.`,
       tools: [
+        defineTool({
+          name: 'reply_to_comment',
+          description:
+            'Posts your reply in a comment thread of the note, by the thread id that the message gave. Use it when a message asks you to handle several comments, once for each. ' +
+            'For a message about one comment, your final message is the reply; do not use this tool then.',
+          input: { thread_id: z.string().min(1).describe('The id of the thread, as the message gave it.'), text: z.string().min(1).describe('Your reply, in Markdown.') },
+          title: () => 'Reply in a comment thread',
+          run: async ({ thread_id, text }) => {
+            await this.context.replyToComment(thread_id, text);
+            return 'Posted.';
+          },
+        }),
         defineTool({
           name: 'read_note',
           description: `Returns the current text of the note. The line ${PLACEHOLDER} stands for the request and your reply.`,
