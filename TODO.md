@@ -29,6 +29,6 @@ With a setting on, every `SKILL.md` and `AGENT.md` in a named folder of the vaul
 - [x] **Inline.** `@claude/<skill> request` runs the mention with that skill, and `@claude/<agent> request` sends the request to that subagent. The tag pill shows the suffix. The names of the user's own installed skills and agents (`~/.claude/skills`, `~/.claude/agents`, `~/.codex/skills`) work too.
 - [x] **Suggestions.** While the user types `@claude/`, Obsidian suggests the skills and agents, with their descriptions.
 - [x] README, design notes, unit tests.
-- [ ] Vault skills in Codex conversation notes: Yami needs an option for a host's skill sets (`createYami({ skills })`), then Duet passes the set there instead of `sdkOptions` and the mention option.
+- [ ] Vault skills in Codex conversation notes. Yami has the option on its branch `claude/bold-ramanujan-9jh037`: `createYami({ skills })` and `yami.refreshSkills()`. Once that Yami is released and Duet takes it, pass `() => [set root]` there, call `refreshSkills` from `vaultSkillsChanged`, and drop the plugin in `sdkOptions` and the `skills` of mention sessions, which the option covers.
 - [ ] Vault agents for Codex, when Yami's Codex adapter offers subagents.
 - [ ] An end-to-end test in Obsidian with a skill folder in the test vault.
