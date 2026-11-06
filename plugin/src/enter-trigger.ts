@@ -44,6 +44,7 @@ export function enterTrigger(
           onMention({
             name: mention.name,
             prompt: mention.prompt,
+            ...(mention.skill && { skill: mention.skill }),
             file,
             view,
             line: line.number - 1,

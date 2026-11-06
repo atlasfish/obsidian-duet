@@ -60,3 +60,16 @@ describe('findMention with several tags', () => {
     expect(findMention('Ping @claude. @codex do this', NAMES)).toEqual({ name: 'codex', prompt: 'do this' });
   });
 });
+
+describe('tags with a skill', () => {
+  it('finds the skill after the slash and keeps the whole tag as the pill', () => {
+    expect(findTags('@claude/summarize this note', NAMES)).toEqual([{ name: 'claude', from: 0, to: 17, skill: 'summarize' }]);
+    expect(findMention('@claude/summarize this note', NAMES)).toEqual({ name: 'claude', prompt: 'this note', skill: 'summarize' });
+    expect(findMention('see @Codex/review-pr: the intro', NAMES)).toEqual({ name: 'codex', prompt: 'the intro', skill: 'review-pr' });
+  });
+
+  it('leaves a tag without a slash as before', () => {
+    expect(findMention('@claude do this', NAMES)).toEqual({ name: 'claude', prompt: 'do this' });
+    expect(findTags('@claude/', NAMES)).toEqual([{ name: 'claude', from: 0, to: 7 }]);
+  });
+});
