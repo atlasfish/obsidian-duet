@@ -1,7 +1,7 @@
 {
   "id": "duet",
   "name": "Duet",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "minAppVersion": "1.13.0",
   "description": "Work with Claude Code or Codex in your notes. Mention an agent on a line, or chat in a conversation note. You see the agent edit the note live while you type.",
   "author": "nathanaday",
