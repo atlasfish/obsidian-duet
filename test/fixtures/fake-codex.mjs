@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Imitates `codex app-server` for adapter tests. The prompt text selects the scenario.
 import { createInterface } from 'node:readline';
+import { writeFileSync } from 'node:fs';
 
 const THREAD = 'thread-1';
 let nextId = 1000;
@@ -129,6 +130,9 @@ createInterface({ input: process.stdin }).on('line', (line) => {
     case 'initialized':
       return;
     case 'config/read':
+      if (process.env.DUET_CONFIG_EXIT_MARKER) {
+        setTimeout(() => writeFileSync(process.env.DUET_CONFIG_EXIT_MARKER, 'config-process-finished'), 100);
+      }
       return send({ id, result: { config: { mcp_servers: { logs: {}, mail: {} }, plugins: { 'browser@bundled': { enabled: true } } } } });
     case 'thread/start':
       instructions = params.developerInstructions;

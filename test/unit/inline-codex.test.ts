@@ -1,5 +1,5 @@
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -22,14 +22,20 @@ describe('Yami Codex mention integration', () => {
     expect(await readCodexToolConfig(process.execPath, cwd, env)).toMatchObject({ mcp_servers: { logs: {}, mail: {} } });
   });
 
-  it('overrides tool-selection leaves while preserving server transport and disabled tools', () => {
+  it('waits for the configuration process to exit before starting another CLI on the same home', async () => {
+    const marker = join(cwd, 'config-finished');
+    await readCodexToolConfig(process.execPath, cwd, { ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), DUET_CONFIG_EXIT_MARKER: marker });
+    expect(await readFile(marker, 'utf8')).toBe('config-process-finished');
+  });
+
+  it('serializes complete tables while preserving transport, restrictions and names with dots', () => {
     const args = inlineConfigArgs(policy, { mcp_servers: { logs: { command: 'private-command', disabled_tools: ['delete'], enabled_tools: ['read'] }, mail: {} }, plugins: { 'browser@bundled': {} } });
-    expect(args).toContain('mcp_servers."logs".enabled=true');
-    expect(args).toContain('mcp_servers."logs".enabled_tools=["read"]');
-    expect(args).toContain('mcp_servers."mail".enabled=false');
-    expect(args).toContain('plugins."browser@bundled".enabled=false');
-    expect(args.join('\n')).not.toContain('command=');
-    expect(args.join('\n')).not.toContain('disabled_tools=');
+    const tables = args.join('\n');
+    expect(tables).toContain('"logs" = { "command" = "private-command", "disabled_tools" = ["delete"], "enabled_tools" = ["read"], "enabled" = true }');
+    expect(tables).toContain('"mail" = { "enabled" = false }');
+    expect(tables).toContain('"browser@bundled" = { "enabled" = false }');
+    expect(inlineConfigArgs({ ...policy, mcpTools: { 'logs.v2': ['read'] } }, { mcp_servers: { 'logs.v2': { command: 'node', args: ['C:\\notes\\a.mjs'] } } }).join('\n'))
+      .toContain('"logs.v2" = { "command" = "node", "args" = ["C:\\\\notes\\\\a.mjs"]');
   });
 
   it('starts and resumes Yami sessions with live search and read-only native permissions', async () => {
@@ -41,7 +47,7 @@ describe('Yami Codex mention integration', () => {
       expect(setup.approvalPolicy).toBe('never');
       expect(setup.permissions).toBe('yami-read-only');
       expect(setup.argv).toContain('features.shell_tool=false');
-      expect(setup.argv).toContain('mcp_servers."mail".enabled=false');
+      expect(setup.argv.join('\n')).toContain('"mail" = { "enabled" = false }');
       const resume = session.id;
       await session.close();
       session = await startInlineCodexSession({ ...options, resume }, policy);

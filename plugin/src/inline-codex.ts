@@ -9,12 +9,14 @@ export function readCodexToolConfig(executable: string, cwd: string, env: Record
   return new Promise((resolve, reject) => {
     const child = spawn(executable, ['app-server', '--stdio'], { cwd, env, windowsHide: true, stdio: ['pipe', 'pipe', 'ignore'], timeout: 15_000 });
     const lines = createInterface({ input: child.stdout });
+    let config: CodexToolConfig | undefined;
     const send = (message: unknown) => child.stdin.write(JSON.stringify(message) + '\n');
     child.once('error', reject);
     child.stdin.on('error', reject);
     child.once('close', (code) => {
       lines.close();
-      reject(new Error(`Codex closed before returning its tool configuration (exit ${code}).`));
+      if (config) resolve(config);
+      else reject(new Error(`Codex closed before returning its tool configuration (exit ${code}).`));
     });
     lines.on('line', (line) => {
       let response: { id?: number; error?: { message: string }; result?: { config: CodexToolConfig } };
@@ -24,7 +26,7 @@ export function readCodexToolConfig(executable: string, cwd: string, env: Record
         send({ method: 'initialized' });
         send({ id: 2, method: 'config/read', params: { includeLayers: false, cwd } });
       } else if (response.id === 2) {
-        if (response.result?.config) resolve(response.result.config);
+        if (response.result?.config) config = response.result.config;
         else reject(new Error('Codex returned no tool configuration.'));
         child.stdin.end();
       }
@@ -33,20 +35,18 @@ export function readCodexToolConfig(executable: string, cwd: string, env: Record
   });
 }
 
-/** Only override tool-selection leaves; Codex retains transport, credentials and disabled_tools. */
+/** CLI overrides take TOML values; complete tables preserve server transports and arbitrary names. */
 export function inlineConfigArgs(policy: InlineToolPolicy, config: CodexToolConfig): string[] {
-  const selected = inlineConfig(policy, config);
-  const args = Object.entries(selected).filter(([key]) => key !== 'mcp_servers' && key !== 'plugins')
-    .map(([key, value]) => `${key}=${JSON.stringify(value)}`);
-  for (const [server, settings] of Object.entries(selected.mcp_servers as NonNullable<CodexToolConfig['mcp_servers']>)) {
-    const prefix = `mcp_servers.${JSON.stringify(server)}`;
-    args.push(`${prefix}.enabled=${settings.enabled}`);
-    if (settings.enabled_tools) args.push(`${prefix}.enabled_tools=${JSON.stringify(settings.enabled_tools)}`);
+  return Object.entries(inlineConfig(policy, config)).map(([key, value]) => `${key}=${inlineToml(value)}`);
+}
+
+/** Configuration API JSON scalars/arrays use JSON escaping; TOML tables use equals signs. */
+function inlineToml(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(inlineToml).join(', ')}]`;
+  if (value !== null && typeof value === 'object') {
+    return `{ ${Object.entries(value).map(([key, item]) => `${JSON.stringify(key)} = ${inlineToml(item)}`).join(', ')} }`;
   }
-  for (const name of Object.keys(selected.plugins as NonNullable<CodexToolConfig['plugins']>)) {
-    args.push(`plugins.${JSON.stringify(name)}.enabled=false`);
-  }
-  return args;
+  return JSON.stringify(value);
 }
 
 export async function startInlineCodexSession(options: CodexSessionOptions, policy: InlineToolPolicy) {
