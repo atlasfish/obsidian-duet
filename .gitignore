@@ -4,3 +4,4 @@
 node_modules/
 plugin/dist/
 dev-vault/
+.vitest/

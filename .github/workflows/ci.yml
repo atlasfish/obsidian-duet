@@ -28,7 +28,7 @@ jobs:
   # branch, so this check, which the ruleset of main requires, does.
   from-preview:
     name: from preview
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.repository == 'nathanaday/obsidian-duet'
     runs-on: ubuntu-latest
     steps:
       - name: Check the source branch

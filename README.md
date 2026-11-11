@@ -12,6 +12,36 @@ Duet puts these agents in the editor. Write `@claude` and a request on any line,
 
 Duet uses your own Claude Code or Codex installation and login. It needs no API key of its own.
 
+## Configurable inline tools in this fork
+
+Codex note mentions and passage-comment requests use a profile-specific optional tool policy. In **Settings → Duet**, select your Codex agent and enable **Configure inline tools**. With the switch off, Yami supplies its standard agent behavior. Claude and conversation notes use their profile settings.
+
+| Setting | Behavior |
+|---|---|
+| Inline web search | Enables Codex's native live web search. The model and provider must support it. |
+| Inline Shell | Exposes `duet.run_command` in note mentions and passage-comment requests. |
+| Inline Shell approvals | **Ask** prompts for every command; **YOLO** executes without approval prompts. |
+| Inline MCP tools | One exact `server/tool` per line. Empty means no MCP tools. |
+
+For example, if your Codex `config.toml` defines an MCP server named `my-server` with tools named `read_logs` and `get_status`, enter:
+
+```text
+my-server/read_logs
+my-server/get_status
+```
+
+Server names are the keys under `[mcp_servers]`; tool names are the original MCP tool names, without Codex's `mcp__` prefix. Wildcards are not supported. Existing Codex `enabled_tools` and `disabled_tools` restrictions still apply. Unknown or disabled servers cause an error. Only servers declared in the effective Codex configuration are eligible; plugin-provided tools and app connectors are disabled for these controlled mentions.
+
+Shell commands run in the vault directory with **Obsidian's OS permissions**, outside Codex's sandbox. They can use the network and modify accessible files. Commands inherit the agent profile's environment variables and run through `cmd.exe` on Windows or `/bin/sh` elsewhere. Each command has a 60-second default timeout (up to 300 seconds), captures up to 64 KiB of output, and is terminated with its child processes when cancelled or timed out. Ask displays the exact command before execution; YOLO skips that prompt. Select **YOLO** to use SSH or other command-line tools without approving each invocation.
+
+Yami supplies read-only native filesystem permissions. Codex native command and plugin entry points are disabled by the profile policy; Duet supplies host Shell access through its command tool. Note edits use Duet's shared-document tools with live editing and undo. Shell and MCP file writes use their own filesystem operations.
+
+Different inline tool policies use separate stored conversations. Changing settings leaves existing replies in the note. An in-progress turn keeps its original policy; wait for it to finish before sending a request with the new policy. Returning to an earlier policy resumes its matching conversation.
+
+The search toggle does not modify the model catalog. If your provider omits native search (for example, a Responses Lite model configuration), use a compatible model catalog in the Codex home selected by your agent's `CODEX_HOME` environment variable.
+
+The runtime uses Yami's public agent and session interfaces. The fork requirements and module boundaries are described in [SPEC.md](SPEC.md).
+
 ## Quickstart
 
 ### Prerequisites
@@ -42,12 +72,18 @@ Write `@claude` or `@codex` and a request, then press Enter at the end of the li
 
 ![A mention answers in a callout under the line](docs/images/mention-reply.png)
 
-- **Edit the note:** ask for a change, such as `@claude make the list shorter`. In a mention the agent can read your other notes but change only this one, and it cannot run commands, so a mention never asks for approval.
+- **Edit the note:** ask for a change, such as `@claude make the list shorter`. Duet note tools edit this note while Yami supplies read-only native filesystem access. A Codex profile with inline tools enabled can also use the configured search, MCP tools and host Shell; Ask mode prompts for each host command.
 - **Follow up:** each note keeps its own conversation. A later `@claude make it shorter` in the same note continues it, also after you restart Obsidian.
 - **Use a skill:** `@claude/<skill>` runs the request with one of your skills (see [Skills and Agents in Your Vault](#skills-and-agents-in-your-vault)).
 - **Undo the agent:** run **Duet: Undo the agent's last changes in this note**. This removes the edits of the agent's last turn and keeps your own typing and the agent's reply. Cmd+Z or Ctrl+Z undoes only your own typing.
 - **Stop:** run **Duet: Stop the agent in this note**. While a mention agent works, the status bar says so, for example `claude working in Ideas`; select it to open the note.
 - **Start over:** run **Duet: Forget the mention conversation in this note**.
+
+### Optional request styling
+
+Copy [`docs/snippets/duet-requests.css`](docs/snippets/duet-requests.css) to your vault's `.obsidian/snippets/` folder and enable **duet-requests** under **Settings → Appearance → CSS snippets**. It styles editor lines containing a configured agent tag with smaller muted text, a subtle background, and a rounded border. The agent pill keeps its own color. This does not change the Markdown or mention trigger.
+
+In Reading view, this snippet styles paragraphs containing an agent tag. Keep each request in its own paragraph, with a blank line before and after it. Tight list items without a paragraph wrapper are not covered by the Reading view rule; Live Preview still styles their request line.
 
 ### Conversation Notes
 
