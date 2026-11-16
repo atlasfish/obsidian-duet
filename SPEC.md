@@ -24,4 +24,8 @@ The optional `docs/snippets/duet-requests.css` snippet styles mention request li
 
 The plugin exposes upstream API version 2. Conversation creation selects an agent with the `agent` option. Passage comments reside in `.duet/comments/`; inline callouts remain Markdown in their notes. ObShare's callout exporter handles inline callouts; exporting passage-comment files is a separate integration.
 
-Development checks include type checking, lint, unit tests and plugin bundling. An isolated CLI integration test uses a local model endpoint and local MCP fixtures to exercise tool declarations, host commands and resumed sessions without the user's model account.
+## Plugin packaging
+
+The CommonJS bundle supplies the agent SDK's module address as a file URL produced by Node's `pathToFileURL`. The address uses `__filename` when the loader provides it, or an absolute placeholder file path resolved from the working directory. This gives `createRequire` a valid file address on Windows and Unix when Obsidian evaluates the bundle.
+
+Development checks include type checking, lint, unit tests, plugin bundling and loading the built CommonJS module with host API stand-ins. The module-load check runs without `__filename` to cover Obsidian's evaluated loader and checks SDK module addresses. An isolated CLI integration test uses a local model endpoint and local MCP fixtures to exercise tool declarations, host commands and resumed sessions without the user's model account.

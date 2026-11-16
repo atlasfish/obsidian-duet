@@ -23,6 +23,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run plugin:build
+      - run: npm run plugin:check
 
   # main takes pull requests from preview alone; GitHub's rules cannot name the source
   # branch, so this check, which the ruleset of main requires, does.
