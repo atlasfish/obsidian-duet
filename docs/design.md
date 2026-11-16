@@ -21,13 +21,19 @@ Conversation notes carry `type: conversation`, as in every Yami plugin. New conv
 
 ### One conversation per note
 
-Mentions use `yami.noteSessions`. Yami gives one harness session for each note and agent. It follows renames and removals, closes a session after the idle minutes with no turn, and starts a new session when the harness lost the stored one. Duet stores the ids that `save` gives in its plugin data. `setup` gets the note's `TFile`, and builds the state of each harness session from it: the agent's cursors, its note tools, and its reply queue. A new harness session gets new tools, which have seen nothing of the note. Forget the mention conversation calls `notes.forget`. A mention session starts with `skills: []`, so it gets no skill set of Yami.
+`InlineSessions` creates a Yami note-session group for each agent and tool policy. Each group owns one harness session per note. Yami follows note renames and removals, closes idle processes, and resumes stored sessions. Duet stores session IDs under the agent's tag or its policy key. A policy key includes the selected tools and Duet's tool-schema generation, so each tool declaration set resumes its own conversation. Forgetting a note's mention conversation clears every policy group for that note.
+
+`setup` receives the note's `TFile` and builds the agent's presence, note tools and reply queue. The session receives vault skills through `VaultSkills.sessionSkills`. Note mentions and passage-comment requests select the same policy group.
 
 Events reach the right reply through a queue: each mention adds a reply to its session's queue, and each `turn-start` takes the next one.
 
 ### Note tools
 
-A mention session runs with `access: 'read-only'` and Duet's note tools `read_note`, `edit_note` and `write_note`, which run inside the plugin. The agent can read and search the vault, and can change only the note that it was asked in. A read-only session asks for nothing, so a mention has no permission handler. A mention agent types its edits by `yami.animate`, the same rule as a conversation.
+A mention session uses `access: 'read-only'` for native filesystem operations. Duet's `read_note`, `edit_note`, `write_note` and `reply_to_comment` tools run inside the plugin. The note-editing tools apply changes to the requested note, with typing animation controlled by `yami.animate`.
+
+For a Codex profile with an inline policy, `DuetCodexAgent` creates the session through Yami's public Codex interface. `inline-codex.ts` reads the effective CLI configuration for the vault and profile environment, waits for the configuration process to exit, and supplies TOML overrides for search, selected MCP tools and disabled native command/plugin entry points. The MCP tables retain their transport configuration and user restrictions. Conversation notes use the standard Codex agent path.
+
+The optional `duet.run_command` tool runs in the host with Obsidian's operating-system permissions, the vault working directory and profile environment. Yami's permission prompts ask for each command in Ask mode; YOLO executes without a prompt. Host commands support cancellation, process-tree termination on timeout and bounded output. Their filesystem writes follow host permissions. `environment.ts` prepares inherited and profile PATH values for Yami and canonicalizes Windows environment keys for host commands.
 
 Edits apply against the version of the note that the agent last read: the Yjs snapshot from the last `read_note`, or from the message that contained the note. Yami merges the edit into the current text, so what the user typed in the meantime stays.
 
@@ -47,7 +53,7 @@ An editor extension shows each `@name` tag of a configured agent as a pill in th
 
 ## API for other plugins
 
-A plugin such as Atlas starts a Duet conversation through `plugin.api` instead of running its own agents. `plugin/src/api.ts` declares `DuetApi` (version 2) and takes the option and result types from `yami/obsidian`; another plugin installs yami for them or copies `dist/obsidian/api.d.ts`. Version 2 renamed the `profile` option to `agent`, and a call that passes `profile` is refused with an error that names `agent`. The `agent` option names a Duet agent by its tag, in any letter case; Duet passes the registered agent to `yami.conversations.start`, which creates the note and sends the first message. Yami reads the conversation folder setting at each call.
+`plugin.api` starts Duet conversation notes for other plugins. `plugin/src/api.ts` declares `DuetApi` version 2 and imports option and result types from `yami/obsidian`. The `agent` option names a configured agent by its tag, in any letter case. Duet passes the registered agent to `yami.conversations.start`, which creates the note and sends the first message. Yami reads the conversation folder setting at each call.
 
 Duet passes each call to `yami.conversations`, which gives these guarantees:
 

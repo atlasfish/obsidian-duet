@@ -1,10 +1,24 @@
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import type { App } from 'obsidian';
-import type { Agent } from 'yami/agent';
+import type { Agent, SessionStart } from 'yami/agent';
 import { ClaudeAgent } from 'yami/agent/claude';
-import { CodexAgent } from 'yami/agent/codex';
+import { CodexAgent, type CodexAgentOptions, type CodexPreferences } from 'yami/agent/codex';
 import { type ConversationAgent, vaultRoot } from 'yami/obsidian';
 import { type AgentProfile, parseEnv } from './settings.ts';
+import { inlinePolicy } from './inline-tools.ts';
+import { startInlineCodexSession } from './inline-codex.ts';
+import type { InlineToolPolicy } from './inline-policy.ts';
+import { harnessOverrides } from './environment.ts';
+
+/** Conversation notes use CodexAgent; Duet note tools select the mention policy. */
+class DuetCodexAgent extends CodexAgent {
+  constructor(private readonly hostOptions: CodexAgentOptions, private readonly policy: InlineToolPolicy) { super(hostOptions); }
+
+  protected override createSession(options: CodexPreferences & SessionStart<CodexPreferences>) {
+    if (options.tools?.name !== 'duet' || options.access !== 'read-only') return super.createSession(options);
+    return startInlineCodexSession({ ...this.sessionOptions(options), executablePath: this.hostOptions.executable, env: this.hostOptions.env }, this.policy);
+  }
+}
 
 /** What the vault adds to a profile's agent: Agent SDK options for Claude Code, and a key that names their state. */
 export interface AgentExtras {
@@ -46,8 +60,11 @@ export class ProfileAgents {
 
   private build(profile: AgentProfile, extras: AgentExtras): Agent {
     const preferences = { cwd: vaultRoot(this.app), model: profile.model || undefined, effort: profile.effort || undefined, approval: profile.approval };
-    const options = { executable: profile.executablePath || undefined, env: parseEnv(profile.env), preferences };
-    if (profile.harness === 'codex') return new CodexAgent(options);
+    const options = { executable: profile.executablePath || undefined, env: harnessOverrides(parseEnv(profile.env)), preferences };
+    if (profile.harness === 'codex') {
+      const policy = inlinePolicy(profile);
+      return policy ? new DuetCodexAgent(options, policy) : new CodexAgent(options);
+    }
     // Without the user's settings, Claude Code loads no MCP servers or plugins of the user's own.
     return new ClaudeAgent({
       ...options,

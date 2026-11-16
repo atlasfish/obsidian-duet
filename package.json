@@ -9,6 +9,7 @@
     "lint": "npm install --prefix scripts/lint --no-audit --no-fund --silent && npm run --prefix scripts/lint lint",
     "test": "vitest run test/unit",
     "plugin:build": "node scripts/plugin.mjs",
+    "plugin:check": "node scripts/check-plugin-load.mjs",
     "plugin:dev": "node scripts/dev-vault.mjs && node scripts/plugin.mjs --vault dev-vault --watch",
     "test:obsidian": "vitest run test/obsidian",
     "screenshots": "tsx scripts/screenshots/capture.ts",

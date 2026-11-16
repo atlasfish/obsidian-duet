@@ -1,7 +1,9 @@
 import { type App, PluginSettingTab, type SettingDefinitionGroup, type SettingDefinitionItem } from 'obsidian';
 import type { ApprovalSetting, Harness } from 'yami/agent';
 import { HARNESS_COLORS } from 'yami/obsidian';
+import type { InlineShellApproval } from './inline-policy.ts';
 import type DuetPlugin from './main.ts';
+import { parseInlineMcpTools } from './inline-tools.ts';
 
 export interface AgentProfile {
   /** The tag without `@`. */
@@ -18,6 +20,13 @@ export interface AgentProfile {
   approval: ApprovalSetting;
   /** Claude Code only: load the user's own MCP servers and plugins. */
   userTools: boolean;
+  /** Codex only: replace inherited optional tools with an explicit mention policy. */
+  inlineToolsEnabled: boolean;
+  inlineWebSearch: boolean;
+  inlineShell: boolean;
+  inlineShellApproval: InlineShellApproval;
+  /** One exact configured server/tool per line. */
+  inlineMcpTools: string;
   /** Color of the agent's cursor and highlights. */
   color: string;
 }
@@ -43,8 +52,8 @@ export const DEFAULT_COMMENT_COLOR = '#f2c94c';
 
 export const DEFAULT_SETTINGS: DuetSettings = {
   profiles: [
-    { name: 'claude', harness: 'claude', executablePath: '', env: '', model: '', effort: '', approval: 'ask', userTools: false, color: HARNESS_COLORS.claude },
-    { name: 'codex', harness: 'codex', executablePath: '', env: '', model: '', effort: '', approval: 'ask', userTools: false, color: HARNESS_COLORS.codex },
+    { name: 'claude', harness: 'claude', executablePath: '', env: '', model: '', effort: '', approval: 'ask', userTools: false, inlineToolsEnabled: false, inlineWebSearch: false, inlineShell: false, inlineShellApproval: 'ask', inlineMcpTools: '', color: HARNESS_COLORS.claude },
+    { name: 'codex', harness: 'codex', executablePath: '', env: '', model: '', effort: '', approval: 'ask', userTools: false, inlineToolsEnabled: false, inlineWebSearch: false, inlineShell: false, inlineShellApproval: 'ask', inlineMcpTools: '', color: HARNESS_COLORS.codex },
   ],
   idleMinutes: 15,
   conversationFolder: 'conversations',
@@ -202,12 +211,23 @@ export class DuetSettingTab extends PluginSettingTab {
         profile[agent.field] = String(value);
         break;
       case 'userTools':
-        profile.userTools = Boolean(value);
+      case 'inlineToolsEnabled':
+      case 'inlineWebSearch':
+      case 'inlineShell':
+        profile[agent.field] = Boolean(value);
+        break;
+      case 'inlineMcpTools':
+        parseInlineMcpTools(String(value));
+        profile.inlineMcpTools = String(value);
+        break;
+      case 'inlineShellApproval':
+        if (value !== 'ask' && value !== 'yolo') throw new Error('Select Ask or YOLO for inline Shell.');
+        profile.inlineShellApproval = value;
         break;
     }
     await this.plugin.saveSettings();
     // The heading shows the tag, and the program decides which approvals and options the agent offers.
-    if (agent.field === 'harness') this.update();
+    if (agent.field === 'harness' || agent.field === 'inlineToolsEnabled') this.update();
     if (agent.field === 'name') this.updateAfterTyping();
   }
 
@@ -302,6 +322,40 @@ export class DuetSettingTab extends PluginSettingTab {
           visible: () => this.plugin.settings.profiles[index]?.harness === 'claude',
           control: { type: 'toggle', key: agentKey(index, 'userTools') },
         },
+        {
+          name: 'Configure inline tools',
+          desc: 'Use an explicit tool policy for Codex mentions. Different policies use separate conversations; previous replies stay in the note.',
+          visible: () => this.plugin.settings.profiles[index]?.harness === 'codex',
+          control: { type: 'toggle', key: agentKey(index, 'inlineToolsEnabled') },
+        },
+        {
+          name: 'Inline web search',
+          desc: 'Allow native live web search. Your Codex model and provider must support it.',
+          visible: () => this.inlineToolsVisible(index),
+          control: { type: 'toggle', key: agentKey(index, 'inlineWebSearch') },
+        },
+        {
+          name: 'Inline Shell',
+          desc: 'Allow commands through Duet. Commands run with Obsidian’s OS permissions and may access the network or change files.',
+          visible: () => this.inlineToolsVisible(index),
+          control: { type: 'toggle', key: agentKey(index, 'inlineShell') },
+        },
+        {
+          name: 'Inline Shell approvals',
+          desc: 'Ask: approve each command. YOLO: run commands without approval prompts.',
+          visible: () => this.inlineToolsVisible(index),
+          control: { type: 'dropdown', key: agentKey(index, 'inlineShellApproval'), options: { ask: 'Ask for each command', yolo: 'YOLO — run without asking' } },
+        },
+        {
+          name: 'Inline MCP tools',
+          desc: 'One exact server/tool per line, from MCP servers in your Codex config.toml. Empty: no MCP tools. Plugin-provided servers are disabled for these mentions.',
+          visible: () => this.inlineToolsVisible(index),
+          control: {
+            type: 'textarea', key: agentKey(index, 'inlineMcpTools'), rows: 4,
+            placeholder: 'my-server/read_logs',
+            validate: (value) => { try { parseInlineMcpTools(value); } catch (error) { return (error as Error).message; } },
+          },
+        },
       ],
     };
   }
@@ -310,6 +364,11 @@ export class DuetSettingTab extends PluginSettingTab {
     this.plugin.settings.profiles.push({ ...DEFAULT_SETTINGS.profiles[0]!, name: this.unusedName() });
     await this.plugin.saveSettings();
     this.update();
+  }
+
+  private inlineToolsVisible(index: number): boolean {
+    const profile = this.plugin.settings.profiles[index];
+    return profile?.harness === 'codex' && profile.inlineToolsEnabled;
   }
 
   /** By the profile, not its index: Obsidian keeps a group's buttons when the group above it goes. */

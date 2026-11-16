@@ -23,8 +23,12 @@ async function install() {
 }
 
 const installPlugin = { name: 'install', setup: (build) => build.onEnd((result) => (result.errors.length ? undefined : install())) };
+const options = pluginBuild({ production: !values.watch, plugins: [installPlugin] });
 const ctx = await context({
-  ...pluginBuild({ production: !values.watch, plugins: [installPlugin] }),
+  ...options,
+  define: { ...options.define, 'import.meta.url': '__duetImportMetaUrl' },
+  // Obsidian evaluates plugin code without __filename. Node creates a native file URL for either loader.
+  banner: { js: 'var __duetImportMetaUrl = require("node:url").pathToFileURL(require("node:path").resolve(typeof __filename === "string" ? __filename : "duet-plugin.cjs")).href;' },
   entryPoints: ['plugin/src/main.ts'],
   outfile: path.join(DIST, 'main.js'),
   logLevel: 'warning',
